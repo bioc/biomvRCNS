@@ -1,0 +1,21 @@
+useDynLib(biomvRCNS, .registration = TRUE)
+
+import(IRanges, GenomicRanges, Gviz)
+importFrom(methods, show)
+importFrom(graphics, plot)
+importFrom(mvtnorm, dmvnorm)
+
+export(
+	biomvRhsmm, hsmmRun, sojournAnno,
+	biomvRseg, regionSegCost, regionSegAlphaNB,
+	biomvRmgmr, maxGapminRun,
+	biomvRGviz, splitFarNeighbour, simmvRsegData
+)
+
+exportMethods(
+    "plot",
+    "show" 
+)
+exportClasses(
+	"biomvRCNS"
+)

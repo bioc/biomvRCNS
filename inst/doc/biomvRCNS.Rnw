@@ -1,0 +1,326 @@
+%\VignetteIndexEntry{biomvRCNS package introduction}
+%\VignetteKeyword{segmentation}
+%\VignetteKeyword{HSMM}
+%\VignetteKeyword{transcriptome mapping}
+%\VignetteKeyword{copy number analysis}
+%\VignetteKeyword{max gap min run}
+%\VignettePackage{biomvRCNS}
+%\VignetteDepends{methods, IRanges, GenomicRanges, GenomicFeatures, Gviz, TxDb.Hsapiens.UCSC.hg19.knownGene, Rsamtools}
+\documentclass[10pt]{article}
+
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc} 
+\usepackage[nogin]{Sweave}
+\usepackage[margin=2cm]{geometry}
+
+\newcommand{\Robject}[1]{{\texttt{#1}}}
+\newcommand{\Rfunction}[1]{{\texttt{#1}}}
+\newcommand{\Rpackage}[1]{{\textit{#1}}}
+\newcommand{\Rclass}[1]{{\textit{#1}}}
+\newcommand{\Rmethod}[1]{{\textit{#1}}}
+\newcommand{\Rfunarg}[1]{{\textit{#1}}}
+
+
+\begin{document}
+\setkeys{Gin}{width=0.8\textwidth}
+\setlength{\parskip}{10pt plus 1pt minus 1pt}
+
+
+\title{\Rpackage{biomvRCNS}: Copy Number study and Segmentation for multivariate biological data.}
+\author{Yang Du\footnote{email:  duyang@fbn-dummerstorf.de}}
+\date{3 February 2012}
+\maketitle
+
+\begin{abstract}
+With high throughput experiments like tiling array and NGS, researchers are looking for continuous homogeneous segments or signal peaks, 
+which would represent chromatin states, methylation ratio, transcripts or genome regions of deletion and amplification. 
+While in a normal experimental set-up, these profiles would be generated for multiple samples or conditions with replicates. 
+In the package \Rpackage{biomvRCNS}, a Hidden Semi Markov Model and one homogeneous segmentation model are implemented 
+and tailored to handle multiple genomic profiles, with the aim of assisting in transcripts detection using high throughput technology 
+like RNA-seq or tiling array, and copy number analysis using aCGH or targeted sequencing.
+\end{abstract}
+
+
+%
+\section{Introduction}
+%
+
+
+To begin with \Rpackage{biomvRCNS}, load the package and read the manual page for the main function.
+
+
+<<loadlib>>=
+library(biomvRCNS)
+@
+<<setwidth, echo=FALSE>>=
+options(width = 70)
+@
+
+
+In the package, 3 main functions are provided for the batch processing of multiple chromosome regions across samples:  
+\Rfunction{biomvRhsmm},  a hidden semi Markov model (HSMM); \Rfunction{biomvRseg}, 
+a maximum likelihood based homogeneous segmentation model; and a third \Rfunction{biomvRmgmr}, 
+custom batch function using max-gap-min-run algorithm.  In the following sections we will illustrate their functionalities using example data.
+
+
+%
+\section{Example of array CGH data set of Coriell cell lines}
+%
+
+
+Extracted from packge \Rpackage{DNACopy}, the \Robject{coriell} data contains two aCGH studies (GM05296 and GM13330) 
+of Corriel cell lines taken from \citep{snijders2001assembly}.
+In particular, with 2271 mapped features in total across 22 autosomes and chromosome X. 
+
+All three main functions accept common data matrix plus positional information as input or a \Rclass{GRanges} object 
+with data matrix stored in the meta columns. To get started, we first build a \Rclass{GRanges} object from \Rclass{data.frame}. 
+
+
+<<coriellGR>>=
+data('coriell', package='biomvRCNS')
+head(coriell, n=3)
+xgr<-GRanges(seqnames=paste('chr', coriell[,2], sep=''), 
+	IRanges(start=coriell[,3], width=1, names=coriell[,1]))
+values(xgr)<-DataFrame(coriell[,4:5], row.names=NULL)
+xgr<-xgr[order(xgr)]
+head(xgr, n=3)
+@ 
+
+
+Please be sure that the data is sorted with respect to their positions before feeding to the models.
+
+
+%
+\subsection{Genomic segmentation with Hidden-semi Markov model}
+%
+
+
+First we use the hidden-semi Markov model with the batch function \Rfunction{biomvRhsmm}, 
+which will sequentially process each chromosome identified by the \Rfunarg{seqnames} 
+(using dummy name when no \Rclass{GRanges} supplied in \Robject{x} or \Robject{xRange}),
+thus for non-continuous regions on the same chromosome user should give different \Rfunarg{seqnames} to each part of the data. 
+Within this package, there is one argument \Rfunarg{grp}, for all main batch functions, 
+which is used to assign data columns to groups according to the experimental design, say technical replicates or biological replicates. 
+Sample columns within the same group could be treated simultaneously in the modelling process as well as iteratively.
+\footnote{Simultaneous treatment within group is currently available for \Rfunarg{emis.type= 'mvnorm'} in \Rfunction{biomvRhsmm}, 
+\Rfunarg{poolGrp=TRUE} in \Rfunction{biomvRmgmr} and \Rfunarg{twoStep=FALSE} in \Rfunction{biomvRseg}.} 
+In this example, the two profiles are considered independent and not similar, thus been given different values in the \Rfunarg{grp} vector. 
+Additionally there is a built-in automatic grouping method, given a valid \Rfunarg{clusterm} and \Rfunarg{grp} set to \Robject{NULL}.
+By default, all data columns are assumed to be from the same group.
+
+<<coriellHsmm, results=hide>>=
+rhsmm<-biomvRhsmm(x=xgr, maxbp=4E4, J=3, soj.type='gamma', 
+	emis.type='norm', grp=c(1,2), cMethod='Viterbi')
+@ 
+<<coriellHsmmres>>=
+show(rhsmm)
+@ 
+
+
+In the above run, we limit the model complexity by setting the \Rfunarg{maxbp} to $4E4$, 
+which will restrict the maximum sojourn time to \Rfunarg{maxbp}. \Rfunarg{J} is the number of states in the HSMM model, 
+this argument can be given explicitly or estimated from prior information provided in \Rfunarg{xAnno}. 
+Argument \Rfunarg{soj.type} defines the type of sojourn distribution; with Gamma distributed sojourn, 
+the neighbouring position will tend to have the same state, and transit to other states if far apart. 
+In this way the sojourn distribution fully incorporate the positional information into the probabilistic framework.
+Argument \Rfunarg{emis.type} controls the distribution of emission probability, 
+in this case the log2 ratio of aCGH data is considered to follow Normal distribution. 
+The function will then call C codes and estimate the most likely state sequence, with either \Rfunarg{cMethod='BandF'} or \Rfunarg{cMethod='Viterbi'}. 
+The \Rfunarg{BandF} method uses a forward-backward algorithm described in \citep{Guedon2003}, 
+which gives a smooth state sequences, whereas the Viterbi algorithm with \Rfunarg{cMethod='Viterbi'} 
+will require appropriate prior for the emission and sojourn distribution to run properly.
+The function returns an object of class \Rclass{biomvRCNS}, in which the \Robject{res} slot 
+is a \Rclass{GRanges} object contain the summary of each estimated segments. There are three meta columns: 
+column \Robject{SAMPLE} gives the column name of which sample this segment belongs to; 
+column \Robject{STATE}, the estimated state for each segments, the lower state number represents 
+state with lower mean value, thus in this example, a state of $1$ could represent region of deletion 
+and $3$ for region of duplication, whereas state $2$ could be considered copy neutral; 
+column \Robject{MEAN}, gives the segment mean.
+
+
+A \Rfunction{plot} method has been implemented for \Rclass{biomvRCNS} object using package \Rpackage{Gviz}, 
+by default the \Rfunction{plot} method tries to output graphics to multiple EPS/PDF files for each chromosome region and sample. 
+Here we set \Rfunarg{tofile=FALSE} to output graphics to the current device, and only show resulting graphics for chromosome 1 from sample Coriell.13330.
+
+
+\begin{center}
+<<coriellHsmmplot, fig=TRUE, echo=FALSE>>=
+biomvRGviz(exprgr=xgr[seqnames(xgr)=='chr1', 'Coriell.13330'], 
+  seggr=rhsmm@res[mcols(rhsmm@res)[,'SAMPLE']=='Coriell.13330'], 
+  regionID='region',  tofile=FALSE)
+@ 
+\end{center}
+
+
+%
+\subsection{Using other methods provided in the package}
+%
+
+
+In this section, we use the other two batch functions to process the \Robject{coriell} data. 
+First we use \Rfunction{biomvRseg}, in which a similar segmentation method like in the 
+package \Rpackage{tillingArray} \citep{Hubertiling} is implemented and extended to handle Poison and Negative binomial distributed data. 
+The function shares several argument with \Rfunction{biomvRhsmm}, like \Rfunarg{maxbp} and \Rfunarg{grp}. 
+The \Rfunarg{maxseg} gives the maximum number of segment per chromosome region, 
+while the optimal number of segment per chromosome region is determined internally by 
+assessing the likelihood with optional penalty terms, by default \Rfunarg{penalty='BIC'} is used. 
+Another option is to use modified Bayes information criterion \Rfunarg{penalty='mBIC'} \citep{mbic2007}, 
+as in the CBS algorithm used in \Rpackage{DNAcopy}. The function proceed in the following manner: 
+assuming within each group sample columns exhibit similar patterns, and thus be processed simultaneously in the first step. 
+By maximizing the likelihood the optimal number of segments is selected for each group. 
+And in a second step if \Rfunarg{twoStep=TRUE} or merging is necessary,  the candidate segments produced in the first step 
+are merged with respect to each sample, thus forcing sample columns in the same group to have a 
+more unified segmentation result yet keeping it possible to have sample specific pattern.
+
+
+<<coriellSeg, results=hide>>=
+rseg<-biomvRseg(x=xgr, maxbp=4E4, maxseg=10, family='norm', grp=c(1,2))
+@
+<<coriellSegres>>=
+head(rseg@res)
+@ 
+
+
+After the example run, the function returns a \Rclass{biomvRCNS} object, 
+containing similar information as the previous \Rfunction{biomvRhsmm} run, 
+except that the \Rfunarg{STATE} column now only have a binary state value of either "HIGH" or "LOW", 
+which is simply graded as 'HIGH' if the segment mean is higher than the grand mean of the whole region, and 'LOW' otherwise.
+
+
+It is also possible to use the simple max-gap-min-run algorithm to segment aCGH profiles, 
+by calling \Rfunction{biomvRmgmr}. But due to the binary nature of the algorithm, 
+one have to run twice in order to get both extremely high and low segments, then combine the resulting \Rclass{GRanges} manually.
+
+
+<<coriellMGMR, results=hide>>=
+rmgmrh<-biomvRmgmr(xgr, q=0.9, high=T, maxgap=1000, minrun=2500, grp=c(1,2))
+rmgmrl<-biomvRmgmr(xgr, q=0.1, high=F, maxgap=1000, minrun=2500, grp=c(1,2))
+res<-c(rmgmrh@res, rmgmrl@res)
+@
+
+
+%
+\section{Example of RNA-seq data from ENCODE}
+%
+
+
+The data contains gene expressions and transcript annotations in the region of the human TP53 gene 
+(chr17:7,560,001-7,610,000 from the Human February 2009 (GRCh37/hg19) genome assembly), 
+which is part of the long RNA-seq data generated by ENCODE/Cold Spring Harbor Lab, 
+containing 2 cell types (GM12878 and K562) with 2 replicates each. 
+
+	
+To generate local read counts, alignment files were pulled from UCSC 
+(\url{http://hgdownload.cse.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeCshlLongRnaSeq/}) using package \Rpackage{Rsamtools}. 
+And subsequently reads were counted in each non-overlapping unit sized window for the region (chr17:7,560,001-7,610,000). 
+In the pre-compiled data \Robject{encodeTP53} , a window size of 25bp was used with the chunk of code below.
+
+
+<<buildENCODEcgr, eval=FALSE>>=
+winsize<-25
+cgr<-GRanges("chr17", strand='-', 
+	IRanges(start=seq(7560001, 7610000, winsize), width =winsize))
+bf<-system.file("extdata", "encodeFiles.txt", package = "biomvRCNS")
+bamfiles<-read.table(bf, header=T, stringsAsFactors=F)
+library(Rsamtools)
+which<-GRanges("chr17", IRanges(7560001, 7610000))
+param<-ScanBamParam(which=which, what=scanBamWhat())
+for(i in seq_len(nrow(bamfiles))){
+	frd<-scanBam(bamfiles[i,1], param=param)
+	frdgr<-GRanges("chr17", strand=frd[[1]]$strand,
+		IRanges(start=frd[[1]]$pos , end = frd[[1]]$pos+frd[[1]]$qwidth-1))
+	mcols(cgr)<-DataFrame(mcols(cgr), DOC=countOverlaps(cgr, frdgr))
+}
+@
+
+
+The pre-compiled data \Robject{encodeTP53} also includes the regional annotation of TP53 RNAs isoforms, \Robject{gmgr}, 
+which were derived from the ENCODE Gene Annotations (GENCODE), 
+\url{http://hgdownload.cse.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeGencodeV4/wgEncodeGencodeManualV4.gtf.gz)}
+, and subset to only isoforms of TP53 gene. The annotation object \Robject{gmgr} could be rebuilt with the following lines using the included file under \Robject{extdata}.
+
+<<buildENCODEgmgr, eval=FALSE>>=
+af<-system.file("extdata", "gmodTP53.csv", package = "biomvRCNS")
+gtfsub<-read.table(af, fill=T, stringsAsFactors=F)
+idx<-gtfsub[,3]=='CDS' | gtfsub[,3]=='UTR'
+gmgr<-GRanges("chr17", IRanges(start=gtfsub[idx, 4], end=gtfsub[idx, 5], 
+	names=gtfsub[idx, 13]), strand='-', TYPE=gtfsub[idx, 3])
+@
+
+
+%
+\subsection{Transcript detection with Hidden-semi Markov model}
+%
+
+
+We first load the \Robject{encodeTP53} data, poll the read counts for each cell type and add 1 to the base count to increase stability. 
+
+
+<<poolENCODEcgr, results=hide>>=
+data(encodeTP53)
+cgr<-encodeTP53$cgr
+gmgr<-encodeTP53$gmgr
+mcols(cgr)<-DataFrame(
+	Gm12878=1+rowSums(as.matrix(mcols(cgr)[,1:2])), 
+	K562=1+rowSums(as.matrix(mcols(cgr)[,3:4])) )
+@
+
+
+For count data from sequencing, the \Rfunarg{emis.type} could be set to either \Robject{'pois'} or \Robject{'nbinom'}, 
+though \Robject{'pois'} is preferred for sharp boundary detection. For the sojourn settings, instead of using the uninformative flat prior, 
+we here use estimates from other data source as a prior. We load the \Rpackage{TxDb.Hsapiens.UCSC.hg19.knownGene} known gene database, 
+and pass the \Rclass{TranscriptDb} object to \Rfunarg{xAnno}.  Then internally sojourn parameters and state number \Rfunarg{J} 
+will be estimated from \Rfunarg{xAnno} by calling function \Rfunction{sojournAnno}. 
+When given a  \Rclass{TranscriptDb} object to \Rfunarg{xAnno}, state number would be set to 3 and each represents 'intergenic', 'intron', 'exon'.
+
+<<ENCODEHsmmTxDbSojourn, results=hide>>=
+library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+txdb<-TxDb.Hsapiens.UCSC.hg19.knownGene	
+rhsmm<-biomvRhsmm(x=cgr, xAnno=txdb, maxbp=1E3, soj.type='gamma', 
+	emis.type='pois', cMethod='BandF', q.alpha=0.01)
+@
+
+
+As in the ENCODE guide \citep{ENCODEguide}, the study identified the p53 isoform observed in K562 cells has a longer 3'UTR region than the isoform seen in the GM12878 cell line. 
+So here we plot our model estimates and consider the third state, namely 'exon', to represent detected transcripts. 
+And the HSMM model clearly picked up the extra transcripts of the K562 cell line at the 3'UTR region. 
+
+
+<<showENCODEHsmm>>=
+rhsmm@res[mcols(rhsmm@res)[,'STATE']=='exon']
+@
+\begin{center}
+<<plotENCODEHsmmK, fig=TRUE, echo=FALSE>>=
+i<-mcols(rhsmm@res)[,'STATE']=='exon' & mcols(rhsmm@res)[,'SAMPLE']=='K562'
+biomvRGviz(exprgr=cgr[,'K562'], gmgr=gmgr, 
+  seggr=rhsmm@res[i], plotstrand='-', regionID='TP53', tofile=FALSE)
+@ 
+\end{center}
+\begin{center}
+<<plotENCODEHsmmG, fig=TRUE, echo=FALSE>>=
+i<-mcols(rhsmm@res)[,'STATE']=='exon' & mcols(rhsmm@res)[,'SAMPLE']=='Gm12878'
+biomvRGviz(exprgr=cgr[,'Gm12878'], gmgr=gmgr, 
+  seggr=rhsmm@res[i], plotstrand='-', regionID='TP53',  tofile=FALSE)
+@ 
+\end{center}
+
+
+The other 2 functions could also be similarly applied here.
+
+<<ENCODEothers, results=hide>>=
+rseg<-biomvRseg(x=cgr, maxbp=1E3, maxseg=20, family='pois')
+rmgmr<-biomvRmgmr(x=cgr, q=0.99, maxgap=50, minrun=100)
+@
+
+
+\section{Session information}
+
+<<session>>=
+sessionInfo()
+@ 
+
+\bibliographystyle{plainnat}
+\bibliography{biomvRCNS}
+
+\end{document}
