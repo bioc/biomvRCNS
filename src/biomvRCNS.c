@@ -2,6 +2,7 @@
 #include <Rmath.h>
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
+#include <R_ext/Constants.h>
 #include <stdlib.h>
 
 #define m_e(x, i, j, nrow) x[(long)(i)+(long)(j)*(long)(nrow)]
@@ -31,6 +32,8 @@ void print_matrix_int(int* x, int nrow, int ncol) {
     }
 }
 
+/*dynamic programming algorithm of Picard et al. */
+/*some codes borrowed from tilingArray*/
 
 void univaRseg(double *C, int *maxcpr, int *maxkr, int *nr, double *mincost, int *minpos, double *mc, int *ss){
 	/*  C variables */
@@ -82,7 +85,8 @@ void univaRseg(double *C, int *maxcpr, int *maxkr, int *nr, double *mincost, int
 
 
 
-/*	forward(a, pi, b, d, D, T, DL, J, maxk, F, N, si);*/
+
+/* viterbi, forward and backward algorithm described in Guedon 2003 */
 void forward(double *a, double *pi, double *b, double *d, double *D, int T, int DL, int J, int maxk, double *F, double *N, double *si) {
 
 /* setup local var*/
@@ -146,7 +150,7 @@ void forward(double *a, double *pi, double *b, double *d, double *D, int T, int 
 
 		for(j=0;j<J;j++){
 			m_e(F, t, j, T) /= N[t];
-			m_e(F, t, j, T)+=1e-300;
+			m_e(F, t, j, T)+= DOUBLE_XMIN;
 /*			Rprintf("j= %d,	t= %d, u= %d, m_e(F, t, j, T)= %.3g,\n",j, t, u, m_e(F, t, j, T));*/
 		}
 		
@@ -163,10 +167,9 @@ void forward(double *a, double *pi, double *b, double *d, double *D, int T, int 
 	}
 	
 /*	return nothing*/
-/*some thing wrong with the F, */
 }
 
-/*the R .Call interface for backwrd-forward algorithm*/
+/*the R .C interface for backwrd-forward algorithm*/
 void backward(double *a, double *pi, double *b, double *d, double *D, int *maxk_r, int *DL_r, int *T_r, int *J_r, 
 			double *eta, double *L, double *N,double *ahat, double *pihat, double *F, double *G, double *L1,double *si){
 
@@ -199,12 +202,15 @@ void backward(double *a, double *pi, double *b, double *d, double *D, int *maxk_
 			m_e(G, t+1, j, T) =0;
 			obs=1;
 			for(u=1;u<=min(T-1-t, maxk);u++) {		
-				obs*=m_e(b, t+u, j, T)/N[t+u];
+				obs*=m_e(b, t+u, j, T)/N[t+u]; //fixme, there is some larger variation in N-> G-> L1 -> L when bad soj is supplied
+				
 				if(u<T-1-t) {
 					if(DL>maxk){
+/*						Rprintf("j=%d, t=%d, u=%d, m_e(G, t+1, j, T)=%.3g, m_e(L1, t+u, j, T)=%.3g, m_e(F, t+u, j, T)=%.3g, obs=%.3g, m_e(d, t*maxk+u-1, j, DL)=%.3g\n", j, t, u, m_e(G, t+1, j, T), m_e(L1, t+u, j, T), m_e(F, t+u, j, T), obs, m_e(d, t*maxk+u-1, j, DL));*/
 						m_e(G, t+1, j, T)+=m_e(L1, t+u, j, T)/m_e(F, t+u, j, T)*obs*m_e(d, t*maxk+u-1, j, DL);
 						m_e(eta, t*maxk+u-1, j, DL)+=m_e(L1, t+u, j, T)/m_e(F, t+u, j, T)*obs*m_e(d, t*maxk+u-1, j, DL)*m_e(si, t+1, j, T);
 					} else {
+/*						Rprintf("j=%d, t=%d, u=%d, m_e(G, t+1, j, T)=%.3g, m_e(L1, t+u, j, T)=%.3g, m_e(F, t+u, j, T)=%.3g, obs=%.3g, m_e(d, u-1, j, maxk)=%.3g\n", j, t, u, m_e(G, t+1, j, T), m_e(L1, t+u, j, T), m_e(F, t+u, j, T), obs, m_e(d, u-1, j, maxk));*/
 						m_e(G, t+1, j, T)+=m_e(L1, t+u, j, T)/m_e(F, t+u, j, T)*obs*m_e(d, u-1, j, maxk);
 						m_e(eta, u-1, j, maxk)+=m_e(L1, t+u, j, T)/m_e(F, t+u, j, T)*obs*m_e(d, u-1, j, maxk)*m_e(si, t+1, j, T);
 					}
@@ -237,10 +243,10 @@ void backward(double *a, double *pi, double *b, double *d, double *D, int *maxk_
 		for(j=0;j<J;j++){
 			m_e(L1, t, j, T) =0;
 			for(i=0;i<J;i++) {
-				m_e(L1, t, j, T) +=m_e(G, t+1, i, T)*m_e(a, j, i, J) ;
+				m_e(L1, t, j, T) +=m_e(G, t+1, i, T)*m_e(a, j, i, J) ; //3.15
 			}
-			m_e(L1, t, j, T) *=m_e(F, t, j, T);
-			m_e(L, t, j, T)=m_e(L1, t, j, T)+m_e(L, t+1, j, T)-m_e(G, t+1, j, T)*m_e(si, t+1, j, T);
+			m_e(L1, t, j, T) *=m_e(F, t, j, T);//3.15
+			m_e(L, t, j, T)=m_e(L1, t, j, T)+m_e(L, t+1, j, T)-m_e(G, t+1, j, T)*m_e(si, t+1, j, T); //3.12
 		} // end for j
 	} // end for t
 	
@@ -256,7 +262,6 @@ void backward(double *a, double *pi, double *b, double *d, double *D, int *maxk_
 	}
 /*	new estimates for a and pi*/
 	for(i=0;i<J;i++){
-/*		pi[i]+=m_e(L, 0, i, T);	*/
 		pihat[i]+=m_e(L, 0, i, T);					
 		for(t=0;t<T-2;t++) {
 			den[i]+=m_e(L1, t, i, T); 
@@ -286,15 +291,13 @@ void viterbi(double *a, double *pi, double *b, double *d, double *D, int *maxk_r
 	int DL = DL_r[0];
 	
 /*setup local variables */	     
-	double obs, prod, maxprod=-1e300;
+	double obs, prod, maxprod=-DOUBLE_XMAX;
 	int i, j, t, u;//, *ops, *opt;
 	
-/*	opt  = (int *)malloc(sizeof(int)*T*J);*/
-/*	ops  = (int *)malloc(sizeof(int)*T*J);*/
-
 	for(t=0;t<T;t++) {
+		R_CheckUserInterrupt();
 		for(j=0;j<J;j++) {								
-			obs=1;
+			obs=1; 
 			if(t<T-1) {					
 				for(u=1;u<=min(t+1,maxk);u++) {
 					if(u<t+1) {
@@ -383,8 +386,103 @@ void viterbi(double *a, double *pi, double *b, double *d, double *D, int *maxk_r
 			u=1;
 		}
 	}
-/*	free(ops);*/
-/*	free(opt);*/
+
+}
+void logviterbi(double *a, double *pi, double *b, double *d, double *D, int *maxk_r, int *DL_r, int *T_r, int *J_r, 
+	double *alpha, int *shat, double *si, int*opt, int* ops) {	 
+
+/*	checking inputs*/
+	int maxk = maxk_r[0];	
+	int J = J_r[0];
+	int T = T_r[0];
+	int DL = DL_r[0];
+	
+/*setup local variables */	     
+	double obs, prod, maxprod=-DOUBLE_XMAX;
+	int i, j, t, u;//, *ops, *opt;
+
+	for(t=0;t<T;t++) {
+		R_CheckUserInterrupt();
+		for(j=0;j<J;j++) {								
+			obs=0; 
+			if(t<T-1) {					
+				for(u=1;u<=min(t+1,maxk);u++) {
+					if(u<t+1) {
+						if(DL>maxk){ 
+							prod = obs+m_e(d, t*maxk+u-1, j, DL)+m_e(si, t-u+1, j, T);
+						} else {
+							prod = obs+m_e(d, u-1, j, maxk)+m_e(si, t-u+1, j, T);
+						}
+						obs+=m_e(b, t-u, j, T);
+					}	else {	
+						if(DL>maxk){ 
+							prod = obs+m_e(d, t*maxk+t, j, DL)+pi[j];
+						} else {
+							prod = obs+m_e(d, t, j, maxk)+pi[j];
+						}
+					}
+					if(u==1 || maxprod < prod) {
+						maxprod = prod;
+						m_e(opt, t, j, T)=u;
+					}	
+				}			
+			} else {
+				for(u=1;u<=min(t+1,maxk);u++) {
+					if(u<T) {
+						if (DL>maxk){
+							prod =obs+m_e(D, t*maxk+u-1, j, DL)+m_e(si, T-u, j, T); 
+						} else {
+							prod =obs+m_e(D, u-1, j, maxk)+m_e(si, T-u, j, T);  
+						}					
+						obs += m_e(b, T-1-u, j, T);
+					} else {	
+						if(DL>maxk){
+							prod=obs+m_e(D, t*maxk+T-1, j, DL)+pi[j];					 
+						} else {
+							prod=obs+m_e(D, T-1, j, maxk)+pi[j];							
+						}
+					}
+					if(u==1 || maxprod < prod) {
+						maxprod = prod;
+						m_e(opt, t, j, T)=u;
+					}						
+				}
+			}
+			m_e(alpha, t, j, T) = maxprod+m_e(b, t, j, T);	
+		}
+
+		if(t<T-1) {
+			for(j=0;j<J;j++){
+				i=0;
+				m_e(si, t+1, j, T)=m_e(a, i, j, J)+m_e(alpha, t, i, T);
+				m_e(ops, t+1, j, T)=0;
+				for(i=1;i<J;i++){
+					if(i!=j) {
+						prod = m_e(a, i, j, J)+m_e(alpha, t, i, T);
+						if(m_e(si, t+1, j, T) <= prod) {
+							m_e(si, t+1, j, T) = prod;
+							m_e(ops, t+1, j, T)=i;
+						}
+					}
+				} 
+			}
+		}
+	}
+
+	shat[T-1] = 0;
+	for(j=1;j<J;j++) {
+		if(m_e(alpha, T-1, shat[T-1] , T) < m_e(alpha, T-1, j, T)) shat[T-1] = j;
+	}
+	u=1;
+	for(t=T-2;t>=0;t--) {
+		if(u < m_e(opt, t+u, shat[t+u], T)) {
+			shat[t] = shat[t+u];
+			u++;
+		} else {
+			shat[t] = m_e(ops, t+u, shat[t+u], T);
+			u=1;
+		}
+	}
 }
 
 static R_NativePrimitiveArgType univaRseg_t[] = {REALSXP, INTSXP, INTSXP, INTSXP, REALSXP, INTSXP, REALSXP, INTSXP};
@@ -393,10 +491,13 @@ static R_NativePrimitiveArgType backward_t[] = {REALSXP, REALSXP, REALSXP, REALS
 
 static R_NativePrimitiveArgType viterbi_t[] = {REALSXP, REALSXP, REALSXP, REALSXP,REALSXP,INTSXP, INTSXP, INTSXP, INTSXP, REALSXP, INTSXP, REALSXP, INTSXP, INTSXP};
 
+static R_NativePrimitiveArgType logviterbi_t[] = {REALSXP, REALSXP, REALSXP, REALSXP,REALSXP,INTSXP, INTSXP, INTSXP, INTSXP, REALSXP, INTSXP, REALSXP, INTSXP, INTSXP};
+
 static const R_CMethodDef cMethods[] = {
   {"univaRseg", (DL_FUNC) &univaRseg, 8, univaRseg_t},
   {"backward", (DL_FUNC) &backward, 18, backward_t},
-   {"viterbi", (DL_FUNC) &viterbi, 14, viterbi_t},
+  {"viterbi", (DL_FUNC) &viterbi, 14, viterbi_t},
+  {"logviterbi", (DL_FUNC) &logviterbi, 14, logviterbi_t},
   {NULL, NULL, 0}
 };
 

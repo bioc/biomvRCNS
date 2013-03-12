@@ -1,10 +1,10 @@
 \name{splitFarNeighbour}
 \alias{splitFarNeighbour}
 \title{
-	Split segments if long gaps exist between feature position
+	Split segments if long gaps exist between feature positions
 }
 \description{
-	Split segments if long gaps exist between feature position
+	Split segments if long gaps exist between feature positions, due to low coverage or resolution.
 }
 \usage{
 splitFarNeighbour(intStart = NULL, intEnd = NULL, xPos = NULL, xRange = NULL, maxgap = Inf, minrun = 1)

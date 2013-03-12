@@ -40,7 +40,7 @@ biomvRGviz(exprgr, gmgr = NULL, prange = NULL, regionID = "regionID", seggr = NU
 	whether names in \code{gmgr} and 'STATE' value in \code{seggr} are shown on the plot.
 }
   \item{...}{
-	other arguments for \code{plot}
+	other arguments for \code{plot}, like \code{main} or \code{ylab}
 }
 }
 \details{

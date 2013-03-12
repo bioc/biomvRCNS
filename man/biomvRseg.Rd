@@ -15,10 +15,10 @@ biomvRseg(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NULL, usePos=
 	input data matrix, or a \code{GRanges} object with input stored in the meta \code{DataFrame}
 }
   \item{maxk}{
-	maximum length of stay for the sojourn distribution 
+	maximum length of a segment
 }
   \item{maxbp}{
-	maximum length of stay in bp for the sojourn distribution, given positional information specified in \code{xPos} / \code{xRange}
+	maximum length of a segment in bp, given positional information specified in \code{xPos} / \code{xRange} / or \code{x}
 }
   \item{maxseg}{
 	maximum number of segment the function will try
@@ -31,7 +31,7 @@ biomvRseg(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NULL, usePos=
 	a \code{IRanges}/\code{GRanges} object, same length as \code{x} rows
 }
   \item{usePos}{
-	character value to indicate whether the 'start', 'end' or 'mid' point position should be used to estimate the sojourn distribution
+	character value to indicate whether the 'start', 'end' or 'mid' point position should be used
 }
   \item{family}{
 	family of \code{x} distribution, only the following types are supported: 'norm', 'nbinom', 'pois'
@@ -100,5 +100,5 @@ biomvRseg(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NULL, usePos=
 	xgr<-GRanges(seqnames=paste('chr', coriell[,2], sep=''), IRanges(start=coriell[,3], width=1, names=coriell[,1]))
 	values(xgr)<-DataFrame(coriell[,4:5], row.names=NULL)
 	xgr<-xgr[order(xgr)]
-	resseg<-biomvRseg(x=xgr, maxbp=1E4, maxseg=3, family='norm', grp=c(1,2))
+	resseg<-biomvRseg(x=xgr, maxbp=4E4, maxseg=10, family='norm', grp=c(1,2))
 }

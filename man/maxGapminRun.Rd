@@ -33,7 +33,7 @@ maxGapminRun(x, xPos = NULL, xRange = NULL, cutoff = NULL, q = 0.9, high=TRUE, m
   	minimum run length for the resulting segments
 }
   \item{maxgap}{
-	numeric value, maximum gap length between regions with TRUE signal.
+	maximum genomic distance below which two adjacent qualified tiles can be joined
 }
   \item{splitLen}{
 	numeric value, maximum length of segments, split if too long

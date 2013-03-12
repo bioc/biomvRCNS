@@ -4,10 +4,10 @@
 	Estimating the most likely state sequence using Hidden Semi Markov Model
 }
 \description{
-	The batch function of building Hidden Semi Markov Model (HSMM) to estimating the most likely state sequences for multiple input data series.
+	The batch function of building Hidden Semi Markov Model (HSMM) to estimate the most likely state sequences for multiple input data series.
 }
 \usage{
-biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='BandF', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, clusterm=NULL, na.rm=TRUE)
+biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, clusterm=NULL, na.rm=TRUE)
 }
 
 \arguments{
@@ -49,7 +49,7 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
 	A value larger than 1 tend to allow larger variation in extreme states;  a value smaller than 1 will decrease the probability of having extreme state
 }
   \item{cMethod}{
-	C algorithm used for the most likely state sequence, 'BandF' or 'Viterbi'
+	C algorithm used for the most likely state sequence, 'F-B' or 'Viterbi'
 }
   \item{maxit}{
 	max iteration of the EM run with Forward-Backward algorithm
@@ -58,7 +58,7 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
 	max distance between neighbouring feature to consider a split
 }
   \item{tol}{
-	tolerance level of the likelihood change to determining the termination of the EM run
+	tolerance level of the likelihood change to terminate the EM run
 }
   \item{grp}{
 	vector of group assignment for each sample, with a length the same as columns in the data matrix, samples within each group would be processed simultaneously if a multivariate emission distribution is available
@@ -72,7 +72,7 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
 }
 \details{
 	This is the batch function of building Hidden Semi Markov Model (HSMM) to estimating the most likely state sequences for multiple input data series.
-	The function will sequentially process each region identified by the distinctive \code{seqnames} in the \code{xRange} object if available, or assuming all data from the same region.
+	The function will sequentially process each region identified by the distinctive \code{seqnames} in \code{x} or in \code{xRange} if available, or assuming all data from the same region.
 	A second layer of stratification is introduced by the argument \code{grp}, which could be used to reflect experimental design. 
 	The assumption is that profiles from the same group could be considered homogeneous, thus processed together if \code{emis.type} is compatible (currently only with 'mvnorm').
 	Argument for the sojourn density will be initialized as flat prior or estimated from other data before calling the work horse function \code{hsmmRun}.
@@ -103,7 +103,7 @@ Yang Du
 	xgr<-GRanges(seqnames=paste('chr', coriell[,2], sep=''), IRanges(start=coriell[,3], width=1, names=coriell[,1]))
 	values(xgr)<-DataFrame(coriell[,4:5], row.names=NULL)
 	xgr<-xgr[order(xgr)]
-	reshsmm<-biomvRhsmm(x=xgr, maxbp=4E4, J=3, soj.type='gamma', emis.type='norm', cMethod='Viterbi', grp=c(1,2))
+	reshsmm<-biomvRhsmm(x=xgr, maxbp=4E4, J=3, soj.type='gamma', emis.type='norm', grp=c(1,2))
 }
 
 \keyword{ hsmm }

@@ -21,10 +21,10 @@ biomvRmgmr(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0.9, high=T
 	a \code{IRanges}/\code{GRanges} obejct, same length as \code{x} rows
 }
   \item{usePos}{
-	character value to indicate whether the 'start', 'end' or 'mid' point position should be used to estimate the sojourn distribution
+	character value to indicate whether the 'start', 'end' or 'mid' point position should be used
 }
   \item{cutoff}{
-	threshold level above which is considered 'HI'
+	threshold level above which is considered extreme
 }
   \item{q}{
 	relative quantile threshold level instead of absolute value for the cutoff
@@ -36,16 +36,16 @@ biomvRmgmr(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0.9, high=T
   	minimum run length for the resulting segments
 }
   \item{maxgap}{
-	max distance between neighbouring feature to consider a split
+	maximum genomic distance below which two adjacent qualified tiles can be joined
 }
   \item{splitLen}{
 	numeric value, maximum length of segments, split if too long
 }
   \item{poolGrp}{
-	TRUE if samples within the same group should be pooled using median for each feture
+	TRUE if samples within the same group should be pooled using median for each feature
 }
   \item{grp}{
-	vector of group assignment for each sample, with a length the same as columns in the data matrix, samples within each group would be processed simutaneously if a multivariate emission distribution is avaliable
+	vector of group assignment for each sample, with a length the same as columns in the data matrix, samples within each group would be processed simultaneously if a multivariate emission distribution is available
 }
   \item{clusterm}{
 	clustering method for prior grouping, possible values are 'ward','single','complete','average','mcquitty','median','centroid'

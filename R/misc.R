@@ -412,7 +412,7 @@ poisFit <- function(x, wt=NULL, maxshift=0) {
 	if(is.null(wt)) wt <- rep(1/length(x),length(x))
 	if(length(x) != length(wt)) stop("length of x and wt differ!")
 	
-	shift<-which.max(sapply(0:maxshift, function(s) sum(dpois(x = x-s, lambda=(x-s) %*% wt,log=TRUE) %*% wt, na.rm=T)))
+	shift<-which.max(sapply(0:maxshift, function(s) sum(dpois(x = x-s, lambda=(x-s) %*% wt,log=TRUE) %*% wt, na.rm=T)))-1
 	lambda <- (x-shift) %*% wt 
     return(c(shift=shift, lambda=lambda))
 }
@@ -422,7 +422,7 @@ nbinomFit <- function(x, wt=NULL, maxshift=0) {
 	if(is.null(wt)) wt <- rep(1,length(x))
 	if(length(x) != length(wt)) stop("length of x and wt differ!")
 	
-	shift <- which.max(sapply(0:maxshift,  function(s) nbinomCLLDD(x, wt, s)$value))
+	shift <- which.max(sapply(0:maxshift,  function(s) nbinomCLLDD(x, wt, s)$value))-1
     res<-c(nbinomCLLDD(x, wt, shift)$par, shift)
     names(res)<-c('size', 'mu', 'shift')
     return(res)

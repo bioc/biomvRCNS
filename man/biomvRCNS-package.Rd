@@ -3,7 +3,7 @@
 \alias{biomvRCNS}
 \docType{package}
 \title{
-biomvRCNS - Copy Number study and Segmentation models for multivariate biological data.
+biomvRCNS - Copy Number study and Segmentation models for multivariate biological data
 }
 \description{
 In this package, a Hidden Semi Markov Model and one homogeneous segmentation based model are designed and implemented for genomic data, with the aim of assisting in transcripts detection using high throughput technology like RNA-seq or tiling array, and copy number analysis using array based CGH or targeted sequencing.
@@ -12,10 +12,12 @@ In this package, a Hidden Semi Markov Model and one homogeneous segmentation bas
 \tabular{ll}{
 Package: \tab biomvRCNS\cr
 Type: \tab Package\cr
-Version: \tab 0.99.0\cr
-Date: \tab 2013-02-03\cr
+Version: \tab 0.99.2\cr
+Date: \tab 2013-03-12\cr
 License: \tab GPL (>= 2)\cr
-Depends: \tab methods, mvtnorm, IRanges, GenomicRanges, Gviz\cr
+Imports: \tab methods, mvtnorm\cr
+Depends: \tab IRanges, GenomicRanges, Gviz\cr
+Suggests: \tab parallel, GenomicFeatures, dynamicTreeCut, Rsamtools, 	TxDb.Hsapiens.UCSC.hg19.knownGene\cr
 }
 }
 \author{

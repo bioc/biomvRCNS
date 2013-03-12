@@ -5,7 +5,7 @@
 ##################################################
 # re-implement HSMM, one more slot to handle distance array
 ##################################################
-biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='BandF', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, clusterm=NULL, na.rm=TRUE){
+biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, clusterm=NULL, na.rm=TRUE){
 	## input checking
 	# lock.transition / lock.d, lock transition and sojourn #fixme
 	# est.method=c('viterbi', 'smooth')
@@ -33,8 +33,8 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 		colnames(x)<-xid
 	}
 	
-	if (is.null(cMethod) || !(cMethod %in% c('BandF', 'Viterbi'))) 
-		stop("'cMethod' must be specified, must be either 'BandF' or 'Viterbi'!")
+	if (is.null(cMethod) || !(cMethod %in% c('F-B', 'Viterbi'))) 
+		stop("'cMethod' must be specified, must be either 'F-B' or 'Viterbi'!")
 
 	if (is.null(emis.type) || !(emis.type %in% c('norm', 'mvnorm', 'pois', 'nbinom'))) 
 		stop("'emis.type' must be specified, must be one of 'norm', 'mvnorm', 'pois', 'nbinom'!")
@@ -97,6 +97,10 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 		} else if(!is.null(maxbp) && maxbp > 1){
 			# has position and good maxbp, will init it latter, maxk will be estimated there
 			soj<-list(J=J, maxbp=maxbp, type = soj.type)
+		} else if (!is.null(maxk) && is.numeric(maxk) && (length(maxk) == 1) && (maxk > 1) &&  (maxk < nr)) {
+			#has pos, but no good maxbp
+				warning('Has positions but no maxbp, using maxk for the sojourn distribution !!!')
+				soj<-list(d = unifMJ(maxk, J), type = soj.type, J=J, maxk=maxk)
 		} else {
 			stop(sprintf("Both maxk and maxbp are not avaliable!"))
 		}
@@ -140,10 +144,15 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 		r<-as.character(seqnames(xRange)) == seqs[s]
 		# prep soj for the c loop, since there are multiple seq, which also means there must be xpos and maxbp
 		if(is.null(soj$d)){
+			# either has soj paramter, or has pos and maxbp for unif
 			ssoj<-append(soj, initDposV(xPos[r], maxbp))
 			if(is.null(ssoj$fttypes)){
+				# dont't have soj param
 				ssoj<-append(ssoj, list(d=unifMJ(ssoj$maxk*sum(r), J)))
 			}
+		} else {
+			# maxk and unif d, no maxbp or xAnno
+			ssoj<-soj
 		}	
 		ssoj <- initSojDd(ssoj)
 		
@@ -176,9 +185,10 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 
 
 
-hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05, r.var=0.75, cMethod='BandF', maxit=1, maxgap=Inf, tol= 1e-6, na.rm=TRUE){
+hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol= 1e-6, na.rm=TRUE){
 	# now x should be a one column matrix
-	if(is.null(dim(x))) x<-matrix(x); colnames(x)<-xid
+	if(is.null(dim(x))) x<-matrix(x)
+	colnames(x)<-xid
 	nr<-nrow(x)
 	J<-soj$J
 	maxk<-soj$maxk
@@ -198,51 +208,65 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 		emis$lambda  <- estEmisMu(x, J, q.alpha=q.alpha)
 	} else if (emis$type == 'nbinom'){
 		emis$mu <- estEmisMu(x, J, q.alpha=q.alpha)
-		emis$size <- rep(0.5, J) # arbitrary prior
+		emis$size <- rep(estimateSegCommonDisp(x, J) # common prior
 	}
 	# switch est.method 
 	#estimation of most likely state sequence
-	if(cMethod=='BandF'){
-		#define likelihood
-		ll <- rep(NA,maxit)
-		# start MM iteration
-		for(it in 1:maxit) {
-			# reestimationg of emmision   
-			emis<-initEmis(emis=emis, x=x)
-			B  = .C("backward", a=as.double(trans), pi=as.double(init), b=as.double(emis$p), d=as.double(soj$d), D=as.double(soj$D),
-					  maxk=as.integer(maxk), DL=as.integer(nrow(soj$d)), T=as.integer(nr), J=as.integer(J), 
-					  eta = double(nrow(soj$d)*J), L=double(nr*J), N=double(nr), ahat=double(J*J), pihat=double(J),
-					  F=double(nr*J), G=double(nr*J), L1 = double(nr*J), si=double(nr*J), PACKAGE='biomvRCNS')
-
-			#update initial prob PI, transition >=0 check
-			init<-B$pihat
-			init[init<0]<-0
-			trans <- matrix(B$ahat,ncol=J)
-			trans[trans<0] <- 0
-			
-			#check B$L
-			if(all(is.nan(B$L))) {
-			  stop("Sojourn distribution doesnot work well, NaN in B$L ")
-			}
-			#update emision according to the new estimated distribution paramenters using B$L
-			emis<-initEmis(emis=emis, x=x, B=B)
-			# update sojourn dD, using B$eta
-			soj<-initSojDd(soj=soj, B=B)
-
-			# loglikelihood for this it, using B$N
-			ll[it]<-sum(log(B$N))
-			if( it>1 && abs(ll[it]-ll[it-1]) < tol) {
-				break()	
-			}
-		}	 # end for maxit
-		## assign states and split if necessary.
-		yhat<-apply(matrix(B$L,ncol=J),1,which.max)
-	} else if (cMethod=='Viterbi'){
+	#define likelihood
+	ll <- rep(NA,maxit)
+	# start MM iteration
+	for(it in 1:maxit) {
+		cat('iteration: ', it, '\n')
+		# reestimationg of emmision   
 		emis<-initEmis(emis=emis, x=x)
-		V  = .C("viterbi", a=as.double(trans), pi=as.double(init), b=as.double(emis$p), d=as.double(soj$d), D=as.double(soj$D),
+		B  = .C("backward", a=as.double(trans), pi=as.double(init), b=as.double(emis$p), d=as.double(soj$d), D=as.double(soj$D),
+				  maxk=as.integer(maxk), DL=as.integer(nrow(soj$d)), T=as.integer(nr), J=as.integer(J), 
+				  eta = double(nrow(soj$d)*J), L=double(nr*J), N=double(nr), ahat=double(J*J), pihat=double(J),
+				  F=double(nr*J), G=double(nr*J), L1 = double(nr*J), si=double(nr*J), PACKAGE='biomvRCNS')
+
+		#update initial prob PI, transition >=0 check
+#		init<-B$pihat
+		init<- abs(B$pihat)/sum(abs(B$pihat))
+		trans <- matrix(B$ahat,ncol=J)
+		trans[trans<0] <- 0
+		
+		#check B$L
+		if(all(is.nan(B$L))) {
+		  stop("Sojourn distribution does not work well, NaN in B$L ")
+		}
+		#update emision according to the new estimated distribution paramenters using B$L
+		emis<-initEmis(emis=emis, x=x, B=B)
+		# update sojourn dD, using B$eta
+		soj<-initSojDd(soj=soj, B=B)
+
+		# loglikelihood for this it, using B$N
+		ll[it]<-sum(log(B$N))
+		if( it>1 && abs(ll[it]-ll[it-1]) < tol) {
+			break()	
+		}
+	}	 # end for maxit
+
+	if (cMethod=='Viterbi'){
+		emis<-initEmis(emis=emis, x=x)
+		
+		logtrans<-log(trans)
+		logtrans[logtrans==-Inf] <- -.Machine$double.xmax
+		loginit<-log(init)
+		loginit[loginit==-Inf] <- -.Machine$double.xmax
+		logd = log(soj$d)
+		logd[logd==-Inf] <- -.Machine$double.xmax
+		logD = log(soj$D)
+		logD[logD==-Inf] <- -.Machine$double.xmax
+		logb<-log(emis$p)
+		logb[logb==-Inf] <- -.Machine$double.xmax
+		
+		V  = .C("logviterbi", a=as.double(trans), pi=as.double(init), b=as.double(emis$p), d=as.double(soj$d), D=as.double(soj$D),
           maxk=as.integer(maxk), DL=as.integer(nrow(soj$d)), T=as.integer(nr), J=as.integer(J), 
           alpha = double(nr*J), shat=integer(nr), si=double(nr*J), opt=integer(nr*J), ops=integer(nr*J), PACKAGE='biomvRCNS')
         yhat<-V$shat+1
+	} else if (cMethod=='F-B'){
+		## assign states and split if necessary.
+		yhat<-apply(matrix(B$L,ncol=J),1,which.max)
 	}
 	if(!is.null(soj$fttypes)){
 		yhat<-soj$fttypes[yhat]
@@ -277,7 +301,7 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 unifMJ<-function(M,J, ints=NULL){
 	# not finished create unif with supplied ints
 	if(is.null(ints)){
-		ret<-do.call(cbind, lapply(1:J, function(j) dunif(1:M, 1, M)))		
+		ret<-do.call(cbind, lapply(1:J, function(j) dunif(1:M, 0, M)))		
 	} else if(min(ints)<1 | max(ints)> M) {
 		stop('All supplied intervals should be in the range of [1, M]')
 	} else {
@@ -384,16 +408,14 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 initDposV<-function(xpos, maxbp){
 	# for each position, find the maxk
 	nr<-length(xpos)
-	maxbpidx<-sapply(1:nr, function(i) max(which(xpos[i]+maxbp >= xpos)))
+	maxbpidx<-sapply(1:nr, function(i) max(which(xpos[i]+maxbp > xpos))) # >= will cause a NA at the end of each position,
 	# find the maxk idx
 	maxk<-max(maxbpidx - seq_len(nr))+1
 	# initialize the maxk position list for each position
 	## option 2, a TM * J matrix
 	dposV<-c(sapply(1:nr, function(t) xpos[t:(t+maxk-1)]-xpos[t]))+1 # dposV[(t-1)*maxk+u]
-	#dposV[1]<-.Machine$double.eps # this will not ensure a 1 for the first position after the dgamma call.
 	# sub > maxbp and NA
 	dposV[which(dposV>maxbp)]<-NA
-	#dposV[is.na(dposV)]<-.Machine$double.xmax # for those positions exceed maxbp, this works fine
 	return(list(dposV=dposV, maxk=maxk))
 }
 
@@ -411,8 +433,8 @@ initSojDd <- function(soj, B=NULL) {
 		## here d for all positions should be aggregated within each J
 		dposV<-soj$dposV
 	}
-#	idx<-dposV != .Machine$double.xmax
 	idx<- !is.na(dposV)
+	dposV[!idx]<- .Machine$integer.max
 	nb <- length(dposV)/maxk
 	if(soj$type == "gamma") {
 		if(!is.null(B)){
@@ -427,7 +449,6 @@ initSojDd <- function(soj, B=NULL) {
 		}	          
 		if(!is.null(soj$shape) && !is.null(soj$scale) && length(soj$shape)==J && length(soj$scale)==J) {
 			# for update with para estimated from B, or initial sojourn using param
-			dposV[!idx]<- .Machine$integer.max
 			soj$d<-sapply(1:J, function(j) dgamma(dposV, shape=soj$shape[j], scale=soj$scale[j]))
 		} # else assume soj$d exist.
 	} else if (soj$type == "pois") {
@@ -441,7 +462,7 @@ initSojDd <- function(soj, B=NULL) {
 				lapply(1:J, function(j)  which(ftidx[,j]) %% maxk ), 
 				function(ic) min(dposV[seq(from=min(ic[ic>0]), to=nb*maxk, by=maxk)])
 			)
-			cat(maxshift, '\n')
+#			cat(maxshift, '\n')
 			for(j in 1:J) { 
 				param <- poisFit(dposV[ftidx[,j]], wt=soj$d[ftidx[,j],j], maxshift=maxshift[j])
 				soj$size[j] <- param['size']
@@ -451,7 +472,6 @@ initSojDd <- function(soj, B=NULL) {
 		}
 		if(!is.null(soj$shift) && !is.null(soj$lambda) && length(soj$lambda)==J && length(soj$shift)==J) {
 			# for update with para estimated from B, or initial sojourn using param
-			dposV[!idx]<- .Machine$integer.max
 			soj$d<-sapply(1:J, function(j) dpois(dposV-soj$shift[j], lambda=soj$lambda[j]))
 		} # else assume soj$d exist.
 		
@@ -475,14 +495,14 @@ initSojDd <- function(soj, B=NULL) {
 		}
 		if(!is.null(soj$shift) && !is.null(soj$size) && !is.null(soj$mu) && length(soj$mu)==J && length(soj$shift)==J && length(soj$size)==J) {
 			# for update with para estimated from B, or initial sojourn using param
-			dposV[!idx]<- .Machine$integer.max
 			soj$d<-sapply(1:J, function(j) dnbinom(dposV-soj$shift[j],size=soj$size[j],mu=soj$mu[j]) )
 		} # else assume soj$d exist.
 	} else if (soj$type == "nparam") {
 		if(!is.null(B)){
-			 soj$d <- apply(matrix(B$eta+.Machine$double.eps, ncol=J), 2, function(x) x/sum(x))
+			 soj$d <- matrix(B$eta+.Machine$double.eps, ncol=J)
 		} # else assume soj$d exist.
 	}
+	soj$d<-sapply(1:J, function(j) sapply(1:nb, function(t) soj$d[((t-1)*maxk+1):(t*maxk),j]/sum(soj$d[((t-1)*maxk+1):(t*maxk),j], na.rm=T)))
 	# add D slot
 	soj$D <- sapply(1:J, function(j) sapply(1:nb, function(t) rev(cumsum(rev(soj$d[((t-1)*maxk+1):(t*maxk),j])))))
 	return(soj)
@@ -557,30 +577,32 @@ initEmis<-function(emis, x, B=NULL){
 			J<-length(emis$mu)
 			emis$p <- sapply(1:J, function(j) dnbinom(x,size=emis$size[j], mu=emis$mu[j]))
 		}
+		emis$p<-emis$p/rowSums(emis$p) # normalized
 	} else {
 		# then this is for the re-restimation of emis param
 		J<-B$J
+		BL<-matrix(B$L,ncol=J)
+		BL<-t(apply(BL, 1, function(x) abs(x)/sum(abs(x))))
 		if(emis$type == 'mvnorm') {
 			isa <-  !apply(is.na(x),1,any) # Find rows with NA's (cov.wt does not like them)
-			tmp <- apply(matrix(B$L,ncol=J), 2, function(cv) cov.wt(x[isa, ], cv[isa])[c('cov', 'center')]) # x is already a matrix 
+			tmp <- apply(BL, 2, function(cv) cov.wt(x[isa, ], cv[isa])[c('cov', 'center')]) # x is already a matrix 
 			emis$mu <- sapply(tmp, function(l) l['cneter'])
 			emis$cov <- sapply(tmp, function(l) l['cov'])
 		} else if (emis$type == 'pois'){
 			isa <- !is.na(x)
-			emis$lambda <- apply(matrix(B$L,ncol=J), 2, function(cv) weighted.mean(matrix(x[isa]), cv[isa]))
+			emis$lambda <- apply(BL, 2, function(cv) weighted.mean(matrix(x[isa]), cv[isa]))
 		} else if (emis$type == 'norm'){
 			isa <- !is.na(x)
-			tmp <- apply(matrix(B$L,ncol=J), 2, function(cv) unlist(cov.wt(matrix(x[isa]), cv[isa])[c('cov', 'center')])) # x is already a matrix 
+			tmp <- apply(BL, 2, function(cv) unlist(cov.wt(matrix(x[isa]), cv[isa])[c('cov', 'center')]))
 			emis$mu <- tmp['center',]
 			emis$var <- tmp['cov', ]		
 		} else if(emis$type == 'nbinom'){
 			isa <- !is.na(x)
-			tmp <- apply(matrix(B$L,ncol=J), 2, function(cv) nbinomFit((x[isa]), cv[isa]))
+			tmp <- apply(BL, 2, function(cv) nbinomFit((x[isa]), cv[isa]))
    			emis$mu <- tmp['mu',]
 			emis$size <- tmp['size', ]
 		}
 	}
-	
 	return(emis)
 }	
 

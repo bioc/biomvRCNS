@@ -1,7 +1,7 @@
 \name{sojournAnno}
 \alias{sojournAnno}
 \title{
-	Estimation sojourn distribution parameters from posterior information like annotation data
+	Estimate sojourn distribution parameters from posterior information like annotation data
 }
 \description{
 	Using prior information from previous studies or annotation data  to determine sojourn distribution parameters
@@ -18,7 +18,7 @@ sojournAnno(xAnno, soj.type = "gamma", pbdist = NULL)
 	type of the sojourn distribution, following types are supported: 'gamma', 'pois', 'nbinom'
 }
   \item{pbdist}{
-	average distance between neighbouring features
+	average distance between neighbouring features, in this case in the \code{link{biomvRhsmm}} call one should only use the rank rather than the position.
 }
 }
 \details{
