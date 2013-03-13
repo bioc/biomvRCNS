@@ -208,7 +208,7 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 		emis$lambda  <- estEmisMu(x, J, q.alpha=q.alpha)
 	} else if (emis$type == 'nbinom'){
 		emis$mu <- estEmisMu(x, J, q.alpha=q.alpha)
-		emis$size <- rep(estimateSegCommonDisp(x, J) # common prior
+		emis$size <- rep(estimateSegCommonDisp(x, J)) # common prior
 	}
 	# switch est.method 
 	#estimation of most likely state sequence
