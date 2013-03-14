@@ -401,10 +401,11 @@ gammaFit<-function(x, wt=NULL){
 	if(length(x) != length(wt)) stop("length of x and wt differ!")
 	
 	tmp <- cov.wt(data.frame(x),wt=wt)
-    shape <- (tmp$center/sqrt(tmp$cov))^2
+    shape <- as.numeric(tmp$center/sqrt(tmp$cov))^2
     scale<-as.numeric(tmp$center)/shape
-	par<-optim(c(shape,scale),function(par) sum(dgamma(x,shape=par[1],scale=par[2], log=TRUE)*wt, na.rm=TRUE)  ,lower=.Machine$double.eps, method='L-BFGS-B', control=list(fnscale=-1,maxit=1000))$par
-	return(c(shape=par[1], scale=par[2]))
+#	par<-optim(c(shape,scale),function(par) sum(dgamma(x,shape=par[1],scale=par[2], log=TRUE)*wt, na.rm=TRUE)  ,lower=.Machine$double.eps, method='L-BFGS-B', control=list(fnscale=-1,maxit=1000))$par
+#	return(c(shape=par[1], scale=par[2]))
+	return(c(shape=shape, scale=scale))
 }
 
 poisFit <- function(x, wt=NULL, maxshift=0) {  	
@@ -412,9 +413,9 @@ poisFit <- function(x, wt=NULL, maxshift=0) {
 	if(is.null(wt)) wt <- rep(1/length(x),length(x))
 	if(length(x) != length(wt)) stop("length of x and wt differ!")
 	
-	shift<-which.max(sapply(0:maxshift, function(s) sum(dpois(x = x-s, lambda=(x-s) %*% wt,log=TRUE) %*% wt, na.rm=T)))-1
-	lambda <- (x-shift) %*% wt 
-    return(c(shift=shift, lambda=lambda))
+	shift<-which.max(sapply(0:maxshift, function(s) sum(dpois(x = x-s, lambda=sum((x-s) * wt, na.rm=T) ,log=TRUE) * wt, na.rm=T)))-1
+	lambda <- sum((x-shift) * wt, na.rm=T) 
+    return(c(lambda=lambda, shift=shift))
 }
 
 nbinomFit <- function(x, wt=NULL, maxshift=0) {  	
@@ -431,8 +432,11 @@ nbinomFit <- function(x, wt=NULL, maxshift=0) {
 nbinomCLLDD<-function(x, wt=NULL, s=0){
 	if(is.null(wt)) wt <- rep(1,length(x))
 	if(length(x) != length(wt)) stop("length of x and wt differ!")
-	m <- weighted.mean(x-s,wt)
-	v <- as.numeric(cov.wt(data.frame(x-s),wt=wt)$cov)
+	tmp <- cov.wt(data.frame(x-s),wt=wt)
+	m <- as.numeric(tmp$center)
+	v <- as.numeric(tmp$cov)
 	size <- if (v > m) m^2/(v - m) else 100
-	optim(c(size,m),function(par) sum(dnbinom(x-s,size=par[1],mu=par[2],log=TRUE)*wt, na.rm=TRUE)  ,lower=.Machine$double.eps, method='L-BFGS-B', control=list(fnscale=-1,maxit=1000))
+	value<-sum(dnbinom(x = x-s, size=size, mu=m ,log=TRUE) * wt, na.rm=T)
+	return(list(value=value, par=c(size, m)))
+#	optim(c(size,m),function(par) sum(dnbinom(x-s,size=par[1],mu=par[2],log=TRUE)*wt, na.rm=TRUE) , lower=.Machine$double.eps, method='L-BFGS-B', control=list(fnscale=-1,maxit=1000))
 }

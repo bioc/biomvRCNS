@@ -208,7 +208,7 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 		emis$lambda  <- estEmisMu(x, J, q.alpha=q.alpha)
 	} else if (emis$type == 'nbinom'){
 		emis$mu <- estEmisMu(x, J, q.alpha=q.alpha)
-		emis$size <- rep(estimateSegCommonDisp(x, J)) # common prior
+		emis$size <- rep(estimateSegCommonDisp(x), J) # common prior
 	}
 	# switch est.method 
 	#estimation of most likely state sequence
@@ -365,7 +365,7 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 			param<-gammaFit(ftdist[[j]])
 			if(! is.null(pbdist)){
 				# if distance between points are even
-				param['scale'] <- pbdist / param['scale']
+				param['scale'] <- param['scale'] / pbdist 
 			}
 			shape<-c(shape, param['shape'])
 			scale<-c(scale, param['scale'])
@@ -379,7 +379,7 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 			param<-nbinomFit(ftdist[[j]])
 			if(! is.null(pbdist)){
 				# if distance between points are even
-				param['mu'] <- pbdist / param['mu']
+				param['mu'] <-  param['mu'] / pbdist
 			}
 			size<-c(size, param['size'])
 			mu<-c(mu, param['mu'])
@@ -393,7 +393,7 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 			param<-poisFit(ftdist[[j]])
 			if(! is.null(pbdist)){
 				# if distance between points are even
-				param['lambda'] <- pbdist / param['lambda']
+				param['lambda'] <- param['lambda'] / pbdist 
 			}
 			lambda<-c(lambda, param['lambda'])
 			shift<-c(shift, param['shift'])
@@ -465,8 +465,7 @@ initSojDd <- function(soj, B=NULL) {
 #			cat(maxshift, '\n')
 			for(j in 1:J) { 
 				param <- poisFit(dposV[ftidx[,j]], wt=soj$d[ftidx[,j],j], maxshift=maxshift[j])
-				soj$size[j] <- param['size']
-				soj$mu[j] <- param['mu']
+				soj$lambda[j] <- param['lambda']
 				soj$shift[j] <- param['shift']
 			}
 		}
