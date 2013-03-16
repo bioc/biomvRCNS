@@ -34,7 +34,6 @@ simmvRsegData<-function(nr=50, nc=10, N=c(3,4), family='norm', comVar=TRUE, segD
 		regd <- vector(mode="list", length=nc)
 	}
 	
-	## generate size factor for nbinom
 	if(family=='norm'){
 		if(comVar){
 			regsd<-lapply(N+1, function(x) rep(runif(1, 1, 3), x))
@@ -79,38 +78,36 @@ mat2list<-function(x, nr=NULL){
 	return(L)
 }
 
-# check grp setting, cluster if needed, otherwise treat as one group
-preClustGrp<-function(x, grp=NULL, clusterm=NULL, deepSplit=4, minClusterSize=4){
+
+preClustGrp<-function(x, grp=NULL, cluster.m=NULL, deepSplit=4, minClusterSize=4){
 	clustmethods<-c('ward','single','complete','average','mcquitty','median','centroid')
 	nc<-ncol(x)
 	if (!is.null(grp)) {
 		if(length(grp)!=nc) 
 			stop('length of grp differs from number of column in x !!!')
-		if(!is.null(clusterm)) 
+		if(!is.null(cluster.m)) 
 			warning('clustering would not be performed, using the grp input instead !!!')	
 		grp<-as.character(grp)
-	}	else if(!is.null(clusterm) && nc >= 4){
-		# no grp and has clusterm
+	}	else if(!is.null(cluster.m) && nc >= 4){
+		# no grp and has cluster.m
 		if(length(find.package('dynamicTreeCut', quiet=T))==0) {
 			warning("'dynamicTreeCut' is not found, clustering result ignored, treated as one group!!!")
 			grp<-rep('1', nc)
 		} else{
-			clusterm<-match.arg(clusterm, clustmethods)
+			cluster.m<-match.arg(cluster.m, clustmethods)
 			DM <- dist(t(x))
-			HC <- hclust(DM, method=clusterm)
+			HC <- hclust(DM, method=cluster.m)
 			require(dynamicTreeCut)
-			# may provide parameter input later for this function
-			grp<-cutreeDynamic(dendro = HC, distM = as.matrix(DM), deepSplit = deepSplit, pamRespectsDendro = FALSE, minClusterSize = minClusterSize, verbose=0) ## could change this minclustersize to a parameter
+			grp<-cutreeDynamic(dendro = HC, distM = as.matrix(DM), deepSplit = deepSplit, pamRespectsDendro = FALSE, minClusterSize = minClusterSize, verbose=0) 
 		}
 	} else {
-		# no input for grouping or cluster, thus keep all in one group
 		grp<-rep('1', nc)
 	}
 	return(grp)
 }
 
-## main function for normized numeric intensity vectors
-biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0.9, high=TRUE, minrun=5, maxgap=2, splitLen=Inf, poolGrp=FALSE, grp=NULL, clusterm=NULL, na.rm=TRUE){
+## main function 
+biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0.9, high=TRUE, minrun=5, maxgap=2, splitLen=Inf, poolGrp=FALSE, grp=NULL, cluster.m=NULL, avg.m='median', trim=0, na.rm=TRUE){
 	
 	if (!is.numeric(x) &&  !is.matrix(x) && class(x)!='GRanges') 
         stop("'x' must be a numeric vector or matrix or a GRanges object.")
@@ -135,7 +132,7 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 		colnames(x)<-xid
 	}
 	
-	## some checking on xpos and xrange, xrange exist then xpos drived from xrange,
+	## some checking on xpos and xrange, xrange exist then xpos derived from xrange,
 	if(!is.null(xRange) && (class(xRange)=='GRanges' || class(xRange)=='IRanges') && !is.null(usePos) && length(xRange)==nr && usePos %in% c('start', 'end', 'mid')){
 		if(usePos=='start'){
 			xPos<-start(xRange)
@@ -156,7 +153,7 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
  
     # check grp setting, cluster if needed, otherwise treat as one group	
    	if(!is.null(grp)) grp<-as.character(grp)
-	grp<-preClustGrp(x, grp=grp, clusterm=clusterm)
+	grp<-preClustGrp(x, grp=grp, cluster.m=cluster.m)
 	
 	## build xRange if not a GRanges for the returning object
 	if(is.null(xRange) || class(xRange) != 'GRanges'){
@@ -189,7 +186,7 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 								strand=strand(xRange)[r][Ilist$IS],
 								SAMPLE=rep(xid[gi], each=length(Ilist$IS)), 
 								STATE=rep('HI', length(Ilist$IS)*sum(gi)), 
-								MEAN=sapply(which(gi), function(c) sapply(seq_along(Ilist$IS), function(t) mean(x[Ilist$IS[t]:Ilist$IE[t],c], na.rm=na.rm)))
+								AVG=sapply(which(gi), function(c) sapply(seq_along(Ilist$IS), function(t) avgFunc(x[Ilist$IS[t]:Ilist$IE[t],c], avg.m=avg.m, trim=trim, na.rm=na.rm)))
 					)
 					res<-c(res, tores)					
 				}
@@ -202,14 +199,14 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 						strand=strand(xRange)[r][Ilist$IS],
 						SAMPLE=rep(xid[c], length(Ilist$IS)), 
 						STATE=rep(ifelse(high, 'HIGH', 'LOW'), length(Ilist$IS)), 
-						MEAN=as.numeric(sapply(seq_along(Ilist$IS),  function(t) mean(x[Ilist$IS[t]:Ilist$IE[t],c], na.rm=na.rm)))
+						AVG=as.numeric(sapply(seq_along(Ilist$IS),  function(t) avgFunc(x[Ilist$IS[t]:Ilist$IE[t],c], avg.m=avg.m, trim=trim, na.rm=na.rm)))
 					)
 					res<-c(res, tores)	
 				}
 			}
 			
 			} # end c for
-			cat(sprintf("Building segmetation model for group %s complete\n", g))
+			cat(sprintf("Building segmentation model for group %s complete\n", g))
 		} # end for g
 		cat(sprintf("Processing sequence %s complete\n", seqs[s]))
 	} # end for s
@@ -217,7 +214,7 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 	values(xRange)<-DataFrame(x,  row.names = NULL)
 	new("biomvRCNS",  
 		x = xRange, res = res,
-		param=list(maxgap=maxgap, minrun=minrun, q=q, cutoff=cutoff, splitLen=splitLen, group=grp, clusterm=clusterm, poolGrp=poolGrp, na.rm=na.rm)
+		param=list(maxgap=maxgap, minrun=minrun, q=q, cutoff=cutoff, splitLen=splitLen, group=grp, cluster.m=cluster.m, poolGrp=poolGrp, avg.m=avg.m, trim=trim, na.rm=na.rm)
 	)
 
 }
@@ -429,6 +426,7 @@ nbinomFit <- function(x, wt=NULL, maxshift=0) {
     return(res)
 }
 
+
 nbinomCLLDD<-function(x, wt=NULL, s=0){
 	if(is.null(wt)) wt <- rep(1,length(x))
 	if(length(x) != length(wt)) stop("length of x and wt differ!")
@@ -439,4 +437,13 @@ nbinomCLLDD<-function(x, wt=NULL, s=0){
 	value<-sum(dnbinom(x = x-s, size=size, mu=m ,log=TRUE) * wt, na.rm=T)
 	return(list(value=value, par=c(size, m)))
 #	optim(c(size,m),function(par) sum(dnbinom(x-s,size=par[1],mu=par[2],log=TRUE)*wt, na.rm=TRUE) , lower=.Machine$double.eps, method='L-BFGS-B', control=list(fnscale=-1,maxit=1000))
+}
+
+
+avgFunc<-function(x, avg.m='median', trim=0, na.rm=TRUE){
+	switch(avg.m,
+		mean=mean(x, trim=trim, na.rm=na.rm),
+		median=median(x, na.rm=na.rm),
+		stop("invalid 'avg.m' specified!")
+	)
 }

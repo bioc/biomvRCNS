@@ -71,7 +71,7 @@ Currently the package does not deal with data correction, so input should be nor
 
 
 Extracted from packge \Rpackage{DNACopy}, the \Robject{coriell} data contains two aCGH studies (GM05296 and GM13330) 
-of Corriel cell lines taken from \citep{snijders2001assembly}.
+of Corriel cell lines taken from \citet{snijders2001assembly}.
 In particular, with 2271 mapped features in total across 22 autosomes and chromosome X. 
 
 All three main functions accept common data matrix plus positional information as input or a \Rclass{GRanges} object 
@@ -107,7 +107,7 @@ Sample columns within the same group could be treated simultaneously in the mode
 \footnote{Simultaneous treatment within group is currently available for \Rfunarg{emis.type= 'mvnorm'} in \Rfunction{biomvRhsmm}, 
 \Rfunarg{poolGrp=TRUE} in \Rfunction{biomvRmgmr} and \Rfunarg{twoStep=FALSE} in \Rfunction{biomvRseg}.} 
 In this example, the two profiles are considered independent and not similar, thus been given different values in the \Rfunarg{grp} vector. 
-Additionally there is a built-in automatic grouping method, given a valid clustering method \Rfunarg{clusterm} and \Rfunarg{grp} set to \Robject{NULL}.
+Additionally there is a built-in automatic grouping method, given a valid clustering method \Rfunarg{cluster.m} and \Rfunarg{grp} set to \Robject{NULL}.
 By default, all data columns are assumed to be from the same group.
 
 <<coriellHsmm, results=hide>>=
@@ -128,7 +128,7 @@ In this way the sojourn distribution fully incorporate the positional informatio
 Argument \Rfunarg{emis.type} controls the distribution of emission probability, 
 in this case the log2 ratio of aCGH data is considered to follow Normal distribution. 
 The function will then call C codes and estimate the most likely state sequence, with either \Rfunarg{cMethod='F-B'} or \Rfunarg{cMethod='Viterbi'}. 
-The \Rfunarg{F-B} method uses a forward-backward algorithm described in \citep{Guedon2003}, 
+The \Rfunarg{F-B} method uses a forward-backward algorithm described in \citet{Guedon2003}, 
 which gives a smooth state sequences, whereas the Viterbi algorithm with \Rfunarg{cMethod='Viterbi'} 
 will use the states profile estimated by the forward-backward algorithm and rebuild the most likely state sequence.
 The function returns an object of class \Rclass{biomvRCNS}, in which the \Robject{res} slot 
@@ -137,7 +137,7 @@ column \Robject{SAMPLE} gives the column name of which sample this segment belon
 column \Robject{STATE}, the estimated state for each segments, the lower state number represents 
 state with lower mean value, thus in this example, a state of $1$ could represent region of deletion 
 and $3$ for region of duplication, whereas state $2$ could be considered copy neutral; 
-column \Robject{MEAN}, gives the segment mean.
+column \Robject{AVG}, gives the segment average value.
 
 
 A \Rfunction{plot} method has been implemented for \Rclass{biomvRCNS} object using package \Rpackage{Gviz}, 
@@ -161,12 +161,12 @@ biomvRGviz(exprgr=xgr[seqnames(xgr)=='chr1', 'Coriell.13330'],
 
 In this section, we use the other two batch functions to process the \Robject{coriell} data. 
 First we use \Rfunction{biomvRseg}, in which a similar segmentation method like in the 
-package \Rpackage{tillingArray} \citep{Hubertiling} is implemented and extended to handle Poison and Negative binomial distributed data. 
+package \Rpackage{tillingArray} \citealp{Hubertiling} is implemented and extended to handle Poison and Negative binomial distributed data. 
 The function shares several argument with \Rfunction{biomvRhsmm}, like \Rfunarg{maxbp} and \Rfunarg{grp}. 
 The \Rfunarg{maxseg} gives the maximum number of segment per chromosome region, 
 while the optimal number of segment per chromosome region is determined internally by 
 assessing the likelihood with optional penalty terms, by default \Rfunarg{penalty='BIC'} is used. 
-Another option is to use modified Bayes information criterion \Rfunarg{penalty='mBIC'} \citep{mbic2007}, 
+Another option is to use modified Bayes information criterion \Rfunarg{penalty='mBIC'} \citealp{mbic2007}, 
 as in the CBS algorithm used in \Rpackage{DNAcopy}. The function proceed in the following manner: 
 assuming within each group sample columns exhibit similar patterns, and thus be processed simultaneously in the first step. 
 By maximizing the likelihood the optimal number of segments is selected for each group. 
@@ -284,7 +284,7 @@ rhsmm<-biomvRhsmm(x=cgr, xAnno=txdb, maxbp=1E3, soj.type='gamma',
 @
 
 
-As in the ENCODE guide \citep{ENCODEguide}, the study identified the p53 isoform observed in K562 cells has a longer 3'UTR region than the isoform seen in the GM12878 cell line. 
+As in the ENCODE guide \citealp{ENCODEguide}, the study identified the p53 isoform observed in K562 cells has a longer 3'UTR region than the isoform seen in the GM12878 cell line. 
 So here we plot our model estimates and consider the third state, namely 'exon', to represent detected transcripts. 
 And the HSMM model clearly picked up the extra transcripts of the K562 cell line at the 3'UTR region. 
 

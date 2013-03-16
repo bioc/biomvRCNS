@@ -1,3 +1,7 @@
+15-MAR-2013  Yang Du 
+	* v0.99.2 
+		§ add avgFunc to be used in average calculation, median and mean with trim, default to median
+		
 12-MAR-2013  Yang Du 
 	* v0.99.2 
 		§ add log-Vertibi in c

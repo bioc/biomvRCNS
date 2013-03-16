@@ -1,11 +1,11 @@
 ## main function for normized numeric intensity vectors
-biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NULL, usePos='start', family='norm', penalty='BIC', twoStep=TRUE, segDisp=FALSE, useMC=FALSE, useSum=TRUE, comVar=TRUE, maxgap=Inf, tol=1e-06, grp=NULL, clusterm=NULL, na.rm=TRUE){
+biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NULL, usePos='start', family='norm', penalty='BIC', twoStep=TRUE, segDisp=FALSE, useMC=FALSE, useSum=TRUE, comVar=TRUE, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', trim=0, na.rm=TRUE){
 	
 	# input to the main function is a matrix object, x, features on the same strand and same chr
 	# optional grouping factor, length of which should be the same as the column of x
 	# input checking and preparation
-	if (is.null(family) || (family != 'norm' && family != 'pois' && family != 'nbinom')) 
-    	stop("'family' must be specified, currently only 'norm' ,'pois' and 'nbinom' are supported !")
+	familes<-c('norm' , 'pois' , 'nbinom')
+	family<-match.arg(family, familes)
 	
 	if (!is.numeric(x) &&  !is.matrix(x) && class(x)!='GRanges') 
         stop("'x' must be a numeric vector or matrix or a GRanges object.")
@@ -69,7 +69,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
     
     # check grp setting, cluster if needed, otherwise treat as one group	
    	if(!is.null(grp)) grp<-as.character(grp)
-	grp<-preClustGrp(x, grp=grp, clusterm=clusterm)
+	grp<-preClustGrp(x, grp=grp, cluster.m=cluster.m)
 	
 	
 	## build xRange if not a GRanges for the returning object
@@ -181,9 +181,9 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 						IRanges(start=rep(start(xRange)[Ilist$IS], 1), end=rep(end(xRange)[Ilist$IE], 1)), 
 						strand=strand(xRange)[Ilist$IS], 
 						SAMPLE=rep(xid[c], each=length(Ilist$IS)), 
-						MEAN=as.numeric(sapply(1:length(Ilist$IS),  function(t) apply(as.matrix(x[Ilist$IS[t]:Ilist$IE[t],c]), 2, mean, na.rm=na.rm)))
+						AVG=as.numeric(sapply(1:length(Ilist$IS),  function(t) apply(as.matrix(x[Ilist$IS[t]:Ilist$IE[t],c]), 2, avgFunc, avg.m=avg.m, trim=trim, na.rm=na.rm)))
 					)
-					mcols(tores)<-DataFrame(values(tores), STATE=sapply(1:length(tores), function(i) ifelse(values(tores)[i, 'MEAN']>mean(x[r,c], na.rm=na.rm), 'HIGH', 'LOW')), row.names = NULL)
+					mcols(tores)<-DataFrame(values(tores), STATE=sapply(1:length(tores), function(i) ifelse(values(tores)[i, 'AVG']>avgFunc(x[r,c], avg.m=avg.m, trim=trim, na.rm=na.rm), 'HIGH', 'LOW')), row.names = NULL)
 					res<-c(res, tores)
 					cat(sprintf("No need to run step 2 merging, processing complete for column %s from group %s\n", c, g))
 					
@@ -220,9 +220,9 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 						IRanges(start=rep(start(xRange)[Ilist$IS], 1), end=rep(end(xRange)[Ilist$IE], 1)),
 						strand=strand(xRange)[Ilist$IS], 
 						SAMPLE=rep(xid[c], each=length(Ilist$IS)), 
-						MEAN=as.numeric(sapply(1:length(Ilist$IS),  function(t) apply(as.matrix(x[Ilist$IS[t]:Ilist$IE[t],c]), 2, mean, na.rm=na.rm)))
+						AVG=as.numeric(sapply(1:length(Ilist$IS),  function(t) apply(as.matrix(x[Ilist$IS[t]:Ilist$IE[t],c]), 2, avgFunc, avg.m=avg.m, trim=trim, na.rm=na.rm)))
 					)
-					mcols(tores)<-DataFrame(values(tores), STATE=sapply(1:length(tores), function(i) ifelse(values(tores)[i, 'MEAN']>mean(x[r,c], na.rm=na.rm), 'HIGH', 'LOW')), row.names = NULL)
+					mcols(tores)<-DataFrame(values(tores), STATE=sapply(1:length(tores), function(i) ifelse(values(tores)[i, 'AVG']>avgFunc(x[r,c], avg.m=avg.m, trim=trim, na.rm=na.rm), 'HIGH', 'LOW')), row.names = NULL)
 					res<-c(res, tores)
 					cat(sprintf("Step 2 merging complete for column %s from group %s\n", c, g))
 				} # end 2nd step if
@@ -242,7 +242,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 	values(xRange)<-DataFrame(x,  row.names = NULL)
 	new("biomvRCNS",  
 		x = xRange, res = res,
-		param=list(maxk=tmaxk, maxseg=maxseg, maxbp=maxbp, family=family, penalty=penalty, group=grp, clusterm=clusterm, twoStep=twoStep, segDisp=segDisp, useMC=useMC, useSum=useSum, comVar=comVar, na.rm=na.rm, tol=tol)
+		param=list(maxk=tmaxk, maxseg=maxseg, maxbp=maxbp, family=family, penalty=penalty, group=grp, cluster.m=cluster.m, twoStep=twoStep, segDisp=segDisp, useMC=useMC, useSum=useSum, comVar=comVar, na.rm=na.rm, avg.m=avg.m, trim=trim, tol=tol)
 	)
 
 }

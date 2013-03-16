@@ -7,7 +7,7 @@
  The function will perform a two stage segmentation on multi-sample genomic data from array experiment or high throughput sequencing data.
 }
 \usage{
-biomvRseg(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NULL, usePos='start', family='norm', penalty='BIC', twoStep=TRUE, segDisp=FALSE, useMC=FALSE, useSum=TRUE, comVar=TRUE, maxgap=Inf, tol=1e-06, grp=NULL, clusterm=NULL, na.rm=TRUE)
+biomvRseg(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NULL, usePos='start', family='norm', penalty='BIC', twoStep=TRUE, segDisp=FALSE, useMC=FALSE, useSum=TRUE, comVar=TRUE, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', trim=0, na.rm=TRUE)
 }
 
 \arguments{
@@ -63,8 +63,14 @@ biomvRseg(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NULL, usePos=
   \item{grp}{
 	vector of group assignment for each sample, with a length the same as columns in the data matrix, samples within each group would be processed simultaneously if a multivariate emission distribution is available
 }
-  \item{clusterm}{
+  \item{cluster.m}{
 	clustering method for prior grouping, possible values are 'ward','single','complete','average','mcquitty','median','centroid'
+}
+  \item{avg.m}{
+	method to calculate average value for each segment, 'median' or 'mean' possibly trimmed
+}
+  \item{trim}{
+	the fraction (0 to 0.5) of observations to be trimmed from each end of x before the mean is computed. Values of trim outside that range are taken as the nearest endpoint.
 }
   \item{na.rm}{
 	\code{TRUE} if \code{NA} value should be ignored 

@@ -7,7 +7,7 @@
 	The batch function of building Hidden Semi Markov Model (HSMM) to estimate the most likely state sequences for multiple input data series.
 }
 \usage{
-biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, clusterm=NULL, na.rm=TRUE)
+biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', trim=0, na.rm=TRUE)
 }
 
 \arguments{
@@ -63,8 +63,14 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
   \item{grp}{
 	vector of group assignment for each sample, with a length the same as columns in the data matrix, samples within each group would be processed simultaneously if a multivariate emission distribution is available
 }
-  \item{clusterm}{
+  \item{cluster.m}{
 	clustering method for prior grouping, possible values are 'ward','single','complete','average','mcquitty','median','centroid'
+}
+  \item{avg.m}{
+	method to calculate average value for each segment, 'median' or 'mean' possibly trimmed
+}
+  \item{trim}{
+	the fraction (0 to 0.5) of observations to be trimmed from each end of x before the mean is computed. Values of trim outside that range are taken as the nearest endpoint.
 }
   \item{na.rm}{
 	\code{TRUE} if \code{NA} value should be ignored 

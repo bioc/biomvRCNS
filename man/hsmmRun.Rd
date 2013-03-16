@@ -7,7 +7,7 @@
  This is the working horse of the \code{biomvRhsmm}
 }
 \usage{
-hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.var = 0.75, cMethod='F-B', maxit = 1, maxgap = Inf, tol = 1e-06, na.rm = TRUE)
+hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.var = 0.75, cMethod='F-B', maxit = 1, maxgap = Inf, tol = 1e-06, avg.m='median', trim=0,na.rm = TRUE)
 }
 
 \arguments{
@@ -44,6 +44,12 @@ hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.
 }
   \item{tol}{
 	tolerance level of the likelihood change to terminate the EM run
+}
+  \item{avg.m}{
+	method to calculate average value for each segment, 'median' or 'mean' possibly trimmed
+}
+  \item{trim}{
+	the fraction (0 to 0.5) of observations to be trimmed from each end of x before the mean is computed. Values of trim outside that range are taken as the nearest endpoint.
 }
   \item{na.rm}{
 	\code{TRUE} if \code{NA} value should be ignored 

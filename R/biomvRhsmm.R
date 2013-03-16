@@ -5,7 +5,7 @@
 ##################################################
 # re-implement HSMM, one more slot to handle distance array
 ##################################################
-biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, clusterm=NULL, na.rm=TRUE){
+biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', trim=0, na.rm=TRUE){
 	## input checking
 	# lock.transition / lock.d, lock transition and sojourn #fixme
 	# est.method=c('viterbi', 'smooth')
@@ -62,7 +62,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	
 	# check grp setting, cluster if needed, otherwise treat as one group
 	if(!is.null(grp)) grp<-as.character(grp)
-	grp<-preClustGrp(x, grp=grp, clusterm=clusterm)
+	grp<-preClustGrp(x, grp=grp, cluster.m=cluster.m)
 	
 	# initial sojourn setup unifiy parameter input / density input,  using extra distance, non-integer value can give a dtype value
 	if(!is.null(xAnno) && !is.null(soj.type) && soj.type %in% c('gamma', 'pois', 'nbinom') && class(xAnno) %in% c('TranscriptDb', 'GRanges', 'GRangesList')){
@@ -162,12 +162,12 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 			if(iterative){
 				for(c in which(gi)){
 					cat(sprintf("step 1 building HSMM for seq %s in column %s.\n", seqs[s], c))
-					runout<-hsmmRun(x[r,c], xid[c], xRange[r], ssoj, emis.type, q.alpha, r.var, cMethod, maxit, maxgap,  tol, na.rm=na.rm) 	
+					runout<-hsmmRun(x[r,c], xid[c], xRange[r], ssoj, emis.type, q.alpha, r.var, cMethod, maxit, maxgap,  tol, avg.m=avg.m, trim=trim, na.rm=na.rm) 	
 					res<-c(res, runout$res)
 					state[r, c]<-runout$yhat
 				}
 			} else {
-				runout<-hsmmRun(x[r,gi], xid[gi], xRange[r], ssoj, emis.type, q.alpha, r.var, cMethod, maxit, maxgap, tol, na.rm=na.rm)	
+				runout<-hsmmRun(x[r,gi], xid[gi], xRange[r], ssoj, emis.type, q.alpha, r.var, cMethod, maxit, maxgap, tol, avg.m=avg.m, trim=trim, na.rm=na.rm)	
 				res<-c(res, runout$res)
 				state[r, gi]<-runout$yhat
 			}
@@ -179,13 +179,13 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	values(xRange)<-DataFrame(x, state, row.names = NULL)
 	new("biomvRCNS",  
 		x = xRange, res = res,
-		param=list(J=J, maxk=maxk, maxbp=maxbp, maxgap=maxgap, soj.type=soj.type, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var, iterative=iterative, cMethod=cMethod, maxit=maxit, tol=tol, group=grp, clusterm=clusterm, na.rm=na.rm)
+		param=list(J=J, maxk=maxk, maxbp=maxbp, maxgap=maxgap, soj.type=soj.type, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var, iterative=iterative, cMethod=cMethod, maxit=maxit, tol=tol, group=grp, cluster.m=cluster.m, avg.m=avg.m, trim=trim, na.rm=na.rm)
 	)
 }
 
 
 
-hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol= 1e-6, na.rm=TRUE){
+hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol= 1e-6, avg.m='median', trim=0, na.rm=TRUE){
 	# now x should be a one column matrix
 	if(is.null(dim(x))) x<-matrix(x)
 	colnames(x)<-xid
@@ -282,13 +282,12 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 							strand=rep(strand(xRange)[Ilist[[j]][,'IS']], length(xid)), 
 							SAMPLE=rep(xid, each=nrow(Ilist[[j]])), 
 							STATE=rep(as.character(j), nrow(Ilist[[j]])*length(xid)), 
-							MEAN=as.numeric(sapply(xid, function(s) apply(Ilist[[j]], 1, function(r) apply(as.matrix(x[r[1]:r[2],s]), 2, mean, na.rm=na.rm))))
+							AVG=as.numeric(sapply(xid, function(s) apply(Ilist[[j]], 1, function(r) apply(as.matrix(x[r[1]:r[2],s]), 2, avgFunc, avg.m=avg.m, trim=trim, na.rm=na.rm))))
 						)
 					)
 			)
 	return(list(yhat=yhat, res=res))
 }
-
 
 
 
