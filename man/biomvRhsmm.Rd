@@ -33,7 +33,7 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
 	character value to indicate whether the 'start', 'end' or 'mid' point position should be used to estimate the sojourn distribution
 }
   \item{emis.type}{
-	type of the emission distribution, only the following types are supported: 'norm', 'mvnorm', 'pois', 'nbinom'
+	type of the emission distribution, only the following types are supported: 'norm', 'mvnorm', 'pois', 'nbinom', 'mvt', 't'
 }
   \item{xAnno}{
 	a optional \code{TranscriptDb} / \code{GRanges} / \code{GRangesList} object used in \code{\link{sojournAnno}} to infer parameters for the sojourn distribution 

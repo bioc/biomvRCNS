@@ -3,7 +3,7 @@ useDynLib(biomvRCNS, .registration = TRUE)
 import(IRanges, GenomicRanges, Gviz)
 importFrom(methods, show)
 importFrom(graphics, plot)
-importFrom(mvtnorm, dmvnorm)
+importFrom(mvtnorm, dmvnorm, dmvt)
 
 export(
 	biomvRhsmm, hsmmRun, sojournAnno,

@@ -36,8 +36,8 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	if (is.null(cMethod) || !(cMethod %in% c('F-B', 'Viterbi'))) 
 		stop("'cMethod' must be specified, must be either 'F-B' or 'Viterbi'!")
 
-	if (is.null(emis.type) || !(emis.type %in% c('norm', 'mvnorm', 'pois', 'nbinom'))) 
-		stop("'emis.type' must be specified, must be one of 'norm', 'mvnorm', 'pois', 'nbinom'!")
+	if (is.null(emis.type) || !(emis.type %in% c('norm', 'mvnorm', 'pois', 'nbinom', 'mvt', 't'))) 
+		stop("'emis.type' must be specified, must be one of 'norm', 'mvnorm', 'pois', 'nbinom', 'mvt', 't'!")
 
 	## some checking on xpos and xrange, xrange exist then xpos drived from xrange,
 	if(!is.null(xRange) && (class(xRange)=='GRanges' || class(xRange)=='IRanges') && !is.null(usePos) && length(xRange)==nr && usePos %in% c('start', 'end', 'mid')){
@@ -115,7 +115,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 
 
 	# check mv vs iterative
-	 if (emis.type=='mvnorm' ){
+	 if (emis.type=='mvnorm' || emis.type=='mvt' ){
 		iterative<-FALSE
 	} else {
 		iterative<-TRUE
@@ -201,14 +201,15 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 	
 	# initialize emission parameters, either from user input or raw data
 	emis<-list(type=emis.type)
-	if(emis$type == 'norm' || emis$type== 'mvnorm') {
-		emis$mu <- estEmisMu(x, J, q.alpha=q.alpha)
+	emis$mu <- estEmisMu(x, J, q.alpha=q.alpha)
+	if(emis$type == 'norm' || emis$type== 'mvnorm' || emis$type == 'mvt') {
 		emis$var <- estEmisVar(x, J, r.var=r.var)
-	} else if (emis$type == 'pois'){
-		emis$lambda  <- estEmisMu(x, J, q.alpha=q.alpha)
-	} else if (emis$type == 'nbinom'){
-		emis$mu <- estEmisMu(x, J, q.alpha=q.alpha)
+	}
+	if (emis$type == 'nbinom'){
 		emis$size <- rep(estimateSegCommonDisp(x), J) # common prior
+	}
+	if (emis$type == 't' || emis$type == 'mvt'){
+		emis$df <- rep(1, J) # common prior
 	}
 	# switch est.method 
 	#estimation of most likely state sequence
@@ -562,18 +563,19 @@ estEmisVar<-function(x, J=3, na.rm=TRUE, r.var=0.75){
 initEmis<-function(emis, x, B=NULL){
 	if(is.null(B)){
 		# then this is for p initialization
+		J<-length(emis$mu)
 		if(emis$type == 'mvnorm') {
-			J<-length(emis$mu)
-			emis$p <- sapply(1:J, function(j) dmvnorm(x, mean = emis$mu[[j]],  sigma = emis$var[[j]])) # here sigma requires covariance mat
+			emis$p <- sapply(1:J, function(j) dmvnorm(x, mean = emis$mu[[j]],  sigma = emis$var[[j]])) # here sigma requires cov mat
 		} else if (emis$type == 'pois'){
-			J<-length(emis$lambda)
-			emis$p <-sapply(1:J, function(j) dpois(x, lambda=emis$lambda[j]))
+			emis$p <-sapply(1:J, function(j) dpois(x, lambda=emis$mu[j]))
 		} else if (emis$type == 'norm'){
-			J<-length(emis$mu)
 			emis$p <- sapply(1:J, function(j) dnorm(x,mean=emis$mu[j], sd=sqrt(emis$var[j]))) # here is sd
 		} else if(emis$type == 'nbinom'){
-			J<-length(emis$mu)
 			emis$p <- sapply(1:J, function(j) dnbinom(x,size=emis$size[j], mu=emis$mu[j]))
+		} else if(emis$type == 'mvt') {
+			emis$p <- sapply(1:J, function(j) dmvt(x, df=emis$df[[j]], delta = emis$mu[[j]],  sigma = cov2cor(emis$var[[j]]), log=FALSE)) # here sigma requires cor mat
+		} else if(emis$type == 't') {
+			emis$p <- sapply(1:J, function(j) dt(x, df=emis$df[j], ncp = emis$mu[j])) 
 		}
 		emis$p<-emis$p/rowSums(emis$p) # normalized
 	} else {
@@ -584,11 +586,11 @@ initEmis<-function(emis, x, B=NULL){
 		if(emis$type == 'mvnorm') {
 			isa <-  !apply(is.na(x),1,any) # Find rows with NA's (cov.wt does not like them)
 			tmp <- apply(BL, 2, function(cv) cov.wt(x[isa, ], cv[isa])[c('cov', 'center')]) # x is already a matrix 
-			emis$mu <- sapply(tmp, function(l) l['cneter'])
-			emis$cov <- sapply(tmp, function(l) l['cov'])
+			emis$mu <- lapply(tmp, function(l) unname(l[['center']]))
+			emis$var <- lapply(tmp, function(l) unname(l[['cov']]))
 		} else if (emis$type == 'pois'){
 			isa <- !is.na(x)
-			emis$lambda <- apply(BL, 2, function(cv) weighted.mean(matrix(x[isa]), cv[isa]))
+			emis$mu <- apply(BL, 2, function(cv) weighted.mean(matrix(x[isa]), cv[isa]))
 		} else if (emis$type == 'norm'){
 			isa <- !is.na(x)
 			tmp <- apply(BL, 2, function(cv) unlist(cov.wt(matrix(x[isa]), cv[isa])[c('cov', 'center')]))
@@ -599,7 +601,18 @@ initEmis<-function(emis, x, B=NULL){
 			tmp <- apply(BL, 2, function(cv) nbinomFit((x[isa]), cv[isa]))
    			emis$mu <- tmp['mu',]
 			emis$size <- tmp['size', ]
-		}
+		} else 	if(emis$type == 'mvt') {
+			isa <-  !apply(is.na(x),1,any) 
+			tmp <- apply(BL, 2, function(cv) tmvtfFit((x[isa, ]), cv[isa]))
+			emis$mu <- lapply(tmp, function(l) l[['mu']])
+			emis$df <- lapply(tmp, function(l) l[['df']])
+			emis$var <- lapply(tmp, function(l) l[['var']])
+		} else if(emis$type == 't') {
+			isa <- !is.na(x)
+			tmp <- apply(BL, 2, function(cv) tmvtfFit((x[isa]), cv[isa]))
+			emis$mu <- sapply(tmp, function(l) l[['mu']])
+			emis$df <- sapply(tmp, function(l) l[['df']])
+		} 
 	}
 	return(emis)
 }	

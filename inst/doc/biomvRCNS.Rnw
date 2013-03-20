@@ -104,7 +104,7 @@ thus for non-continuous regions on the same chromosome user should give differen
 Within this package, there is one argument \Rfunarg{grp}, for all main batch functions, 
 which is used to assign data columns to groups according to the experimental design, say technical replicates or biological replicates. 
 Sample columns within the same group could be treated simultaneously in the modelling process as well as iteratively.
-\footnote{Simultaneous treatment within group is currently available for \Rfunarg{emis.type= 'mvnorm'} in \Rfunction{biomvRhsmm}, 
+\footnote{Simultaneous treatment within group is currently available for \Rfunarg{emis.type} equals 'mvnorm' or 'mvt' in \Rfunction{biomvRhsmm}, 
 \Rfunarg{poolGrp=TRUE} in \Rfunction{biomvRmgmr} and \Rfunarg{twoStep=FALSE} in \Rfunction{biomvRseg}.} 
 In this example, the two profiles are considered independent and not similar, thus been given different values in the \Rfunarg{grp} vector. 
 Additionally there is a built-in automatic grouping method, given a valid clustering method \Rfunarg{cluster.m} and \Rfunarg{grp} set to \Robject{NULL}.

@@ -439,6 +439,20 @@ nbinomCLLDD<-function(x, wt=NULL, s=0){
 #	optim(c(size,m),function(par) sum(dnbinom(x-s,size=par[1],mu=par[2],log=TRUE)*wt, na.rm=TRUE) , lower=.Machine$double.eps, method='L-BFGS-B', control=list(fnscale=-1,maxit=1000))
 }
 
+tmvtfFit<-function(x, wt=NULL){
+	tol<-1e-6
+	maxv<-20
+	if(!is.matrix(x)){
+		x<-matrix(x)
+	} 
+	n<-nrow(x)
+	if(is.null(wt)) wt <- rep(1,n)
+	if(n != length(wt)) stop("rows of x and length of wt differ!")
+	tmp <- cov.wt(x,wt=wt)
+	ll<--(digamma(seq(maxv)/2))+log(seq(maxv)/2)+sum(log(wt)-wt)/n+1
+	v<-ifelse(max(ll)>=0 && min(ll)<=0, which.min(abs(ll)), 1)
+	return(list(mu=unname(tmp$center), df=v, var=unname(tmp$cov)))
+}
 
 avgFunc<-function(x, avg.m='median', trim=0, na.rm=TRUE){
 	switch(avg.m,
