@@ -13,7 +13,7 @@ In this package, a Hidden Semi Markov Model and one homogeneous segmentation bas
 Package: \tab biomvRCNS\cr
 Type: \tab Package\cr
 Version: \tab 0.99.3\cr
-Date: \tab 2013-03-12\cr
+Date: \tab 2013-03-20\cr
 License: \tab GPL (>= 2)\cr
 Imports: \tab methods, mvtnorm\cr
 Depends: \tab IRanges, GenomicRanges, Gviz\cr
