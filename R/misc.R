@@ -440,18 +440,19 @@ nbinomCLLDD<-function(x, wt=NULL, s=0){
 }
 
 tmvtfFit<-function(x, wt=NULL){
-	tol<-1e-6
-	maxv<-20
-	if(!is.matrix(x)){
-		x<-matrix(x)
-	} 
+	#Aeschliman, C., Park, J., & Kak, A. (2010). A novel parameter estimation algorithm for the multivariate t-distribution and its application to computer vision. Computer Vision–ECCV 2010, 594-607.
+	if(!is.matrix(x))	x<-matrix(x)
 	n<-nrow(x)
+	p<-ncol(x)
 	if(is.null(wt)) wt <- rep(1,n)
 	if(n != length(wt)) stop("rows of x and length of wt differ!")
 	tmp <- cov.wt(x,wt=wt)
-	ll<--(digamma(seq(maxv)/2))+log(seq(maxv)/2)+sum(log(wt)-wt)/n+1
-	v<-ifelse(max(ll)>=0 && min(ll)<=0, which.min(abs(ll)), 1)
-	return(list(mu=unname(tmp$center), df=v, var=unname(tmp$cov)))
+	c<-unname(tmp$center)
+	z<-apply(x, 1, function(r) log(sum((r - c)^2)))
+	zbar<-mean(z)
+	b<-sum((z-zbar)^2)/n - trigamma(p/2)
+	vhat<-floor((1+sqrt(1+4*b))/b)
+	return(list(mu=c, df=ifelse(vhat>1, vhat, 1), var=unname(tmp$cov)))
 }
 
 avgFunc<-function(x, avg.m='median', trim=0, na.rm=TRUE){
