@@ -239,7 +239,7 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 		emis<-initEmis(emis=emis, x=x, B=B)
 		# update sojourn dD, using B$eta
 		soj<-initSojDd(soj=soj, B=B)
-
+		
 		# loglikelihood for this it, using B$N
 		ll[it]<-sum(log(B$N))
 		if( it>1 && abs(ll[it]-ll[it-1]) < tol) {
@@ -261,7 +261,7 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 		logb<-log(emis$p)
 		logb[logb==-Inf] <- -.Machine$double.xmax
 		
-		V  = .C("logviterbi", a=as.double(trans), pi=as.double(init), b=as.double(emis$p), d=as.double(soj$d), D=as.double(soj$D),
+		V  = .C("logviterbi", a=as.double(logtrans), pi=as.double(loginit), b=as.double(logb), d=as.double(logd), D=as.double(logD),
           maxk=as.integer(maxk), DL=as.integer(nrow(soj$d)), T=as.integer(nr), J=as.integer(J), 
           alpha = double(nr*J), shat=integer(nr), si=double(nr*J), opt=integer(nr*J), ops=integer(nr*J), PACKAGE='biomvRCNS')
         yhat<-V$shat+1
@@ -289,7 +289,6 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 			)
 	return(list(yhat=yhat, res=res))
 }
-
 
 
 ##################################################
@@ -502,6 +501,7 @@ initSojDd <- function(soj, B=NULL) {
 		} # else assume soj$d exist.
 	}
 	soj$d<-sapply(1:J, function(j) sapply(1:nb, function(t) soj$d[((t-1)*maxk+1):(t*maxk),j]/sum(soj$d[((t-1)*maxk+1):(t*maxk),j], na.rm=T)))
+	soj$d[is.na(soj$d)]<-0 # NaN enters when all 0 in the den when normalizing 
 	# add D slot
 	soj$D <- sapply(1:J, function(j) sapply(1:nb, function(t) rev(cumsum(rev(soj$d[((t-1)*maxk+1):(t*maxk),j])))))
 	return(soj)
