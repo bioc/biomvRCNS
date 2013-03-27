@@ -29,7 +29,7 @@
 
 \title{\Rpackage{biomvRCNS}: Copy Number study and Segmentation for multivariate biological data.}
 \author{Yang Du\footnote{email:  duyang@fbn-dummerstorf.de}}
-\date{3 February 2012}
+\date{3 February 2013}
 \maketitle
 
 \begin{abstract}
