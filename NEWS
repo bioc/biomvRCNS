@@ -1,17 +1,32 @@
-20-MAR-2013  Yang Du 
-	* v0.99.3 
-		§ add mvt and t to the emis.type and tmvtFit function
-		§ adjust emis fitting and initiation related structure
+CHANGES IN VERSION 0.99.3
+-------------------------
 
-15-MAR-2013  Yang Du 
-	* v0.99.2 
-		§ add avgFunc to be used in average calculation, median and mean with trim, default to median
-		
-12-MAR-2013  Yang Du 
-	* v0.99.2 
-		§ add log-Vertibi in c
-		§ fix shift index (-1) in pois and nbinom fitting
-		§ add normalizing factor for estimation of emis$p and soj$d
-		
-07-MAR-2013  Yang Du 
-	* v0.99.1 in Bioc-devel
+NEW FEATURES
+
+    o add mvt and t to the emis.type and tmvtFit function
+
+BUG FIXES
+
+    o fix shift index (-1) in pois and nbinom fitting	    
+
+CHANGES IN VERSION 0.99.2
+-------------------------
+
+NEW FEATURES
+
+    o add log-Vertibi in c
+    
+    o add normalizing factor for estimation of emis$p and soj$d
+
+    o add avgFunc to be used in average calculation, median and mean with trim, default to median
+
+BUG FIXES
+
+    o fix shift index (-1) in pois and nbinom fitting	
+	
+CHANGES IN VERSION 0.99.1
+-------------------------
+
+NEW FEATURES
+
+    o in Bioc-devel
