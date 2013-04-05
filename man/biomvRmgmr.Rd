@@ -64,7 +64,7 @@ biomvRmgmr(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0.9, high=T
 		This is the batch function to apply \code{\link{maxGapminRun}} multiple sequence.
 }
 \value{
-	A \code{\link{biomvRCNS}} object:
+	A \code{\link{biomvRCNS-class}} object:
     \item{\code{x}:}{Object of class \code{"GRanges"}, with range information either from real positional data or just indices, with input data matrix stored in the meta columns.} 
     \item{\code{res}:}{Object of class \code{"GRanges"} , each range represent one continuous segment identified, with sample name slot 'SAMPLE' and segment mean slot 'MEAN' stored in the meta columns  }
     \item{\code{param}:}{Object of class \code{"list"}, list of all parameters used in the model run. }
