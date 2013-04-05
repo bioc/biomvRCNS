@@ -80,7 +80,7 @@ biomvRseg(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NULL, usePos=
 	A homogeneous segmentation algorithm, using dynamic programming like in \code{tilingArray}; however capable of handling count data from sequencing.
 }
 \value{
-	A \code{\link{biomvRCNS}} object:
+	A \code{\link{biomvRCNS-class}} object:
     \item{\code{x}:}{Object of class \code{"GRanges"}, with range information either from real positional data or just indices, with input data matrix stored in the meta columns.} 
     \item{\code{res}:}{Object of class \code{"GRanges"} , each range represent one continuous segment identified, with sample name slot 'SAMPLE' and segment mean slot 'MEAN' stored in the meta columns  }
     \item{\code{param}:}{Object of class \code{"list"}, list of all parameters used in the model run. }

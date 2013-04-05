@@ -5,7 +5,7 @@
 }
 \description{
   This function could be called to plot segmentation output, together with the input signal and optional annotation. By default resulting image will be printed to file.
-  The plot method for class \code{\link{biomvRCNS}} also calls this method . See the vignette for a more complete example.
+  The plot method for class \code{\link{biomvRCNS-class}} also calls this method. See the vignette for a more complete example.
 }
 \usage{
 biomvRGviz(exprgr, gmgr = NULL, prange = NULL, regionID = "regionID", seggr = NULL, plotstrand = "+", eps = TRUE, tofile = TRUE, showId = TRUE, ...)

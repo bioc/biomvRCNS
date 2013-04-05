@@ -82,11 +82,11 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
 	A second layer of stratification is introduced by the argument \code{grp}, which could be used to reflect experimental design. 
 	The assumption is that profiles from the same group could be considered homogeneous, thus processed together if \code{emis.type} is compatible (currently only with 'mvnorm').
 	Argument for the sojourn density will be initialized as flat prior or estimated from other data before calling the work horse function \code{hsmmRun}.
-	Then for each batch run results will be combined and eventually a \code{\link{biomvRCNS}} object will be returned.
+	Then for each batch run results will be combined and eventually a \code{\link{biomvRCNS-class}} object will be returned.
 	See the vignette for more details and examples.
 }
 \value{
-	A \code{\link{biomvRCNS}} object:
+	A \code{\link{biomvRCNS-class}} object:
     \item{\code{x}:}{Object of class \code{"GRanges"}, with range information either from real positional data or just indices, with input data matrix stored in the meta columns.
     		 Additional meta columns for the estimated states for each sample will also be appended following the input data matrix.} 
     \item{\code{res}:}{Object of class \code{"GRanges"} , each range represent one continuous segment identified, with sample name slot 'SAMPLE', estimated state slot 'STATE' and segment mean slot 'MEAN' stored in the meta columns  }
