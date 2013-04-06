@@ -179,7 +179,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	values(xRange)<-DataFrame(x, state, row.names = NULL)
 	new("biomvRCNS",  
 		x = xRange, res = res,
-		param=list(J=J, maxk=maxk, maxbp=maxbp, maxgap=maxgap, soj.type=soj.type, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var, iterative=iterative, cMethod=cMethod, maxit=maxit, tol=tol, group=grp, cluster.m=cluster.m, avg.m=avg.m, trim=trim, na.rm=na.rm)
+		param=list(J=J, maxk=maxk, maxbp=maxbp, maxgap=maxgap, soj.type=soj.type, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var, iterative=iterative, cMethod=cMethod, maxit=maxit, tol=tol, grp=grp, cluster.m=cluster.m, avg.m=avg.m, trim=trim, na.rm=na.rm)
 	)
 }
 

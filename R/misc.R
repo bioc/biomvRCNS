@@ -214,7 +214,7 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 	values(xRange)<-DataFrame(x,  row.names = NULL)
 	new("biomvRCNS",  
 		x = xRange, res = res,
-		param=list(maxgap=maxgap, minrun=minrun, q=q, cutoff=cutoff, splitLen=splitLen, group=grp, cluster.m=cluster.m, poolGrp=poolGrp, avg.m=avg.m, trim=trim, na.rm=na.rm)
+		param=list(maxgap=maxgap, minrun=minrun, q=q, cutoff=cutoff, splitLen=splitLen, grp=grp, cluster.m=cluster.m, poolGrp=poolGrp, avg.m=avg.m, trim=trim, na.rm=na.rm)
 	)
 
 }

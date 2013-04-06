@@ -242,7 +242,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 	values(xRange)<-DataFrame(x,  row.names = NULL)
 	new("biomvRCNS",  
 		x = xRange, res = res,
-		param=list(maxk=tmaxk, maxseg=maxseg, maxbp=maxbp, family=family, penalty=penalty, group=grp, cluster.m=cluster.m, twoStep=twoStep, segDisp=segDisp, useMC=useMC, useSum=useSum, comVar=comVar, na.rm=na.rm, avg.m=avg.m, trim=trim, tol=tol)
+		param=list(maxk=tmaxk, maxseg=maxseg, maxbp=maxbp, family=family, penalty=penalty, grp=grp, cluster.m=cluster.m, twoStep=twoStep, segDisp=segDisp, useMC=useMC, useSum=useSum, comVar=comVar, na.rm=na.rm, avg.m=avg.m, trim=trim, tol=tol)
 	)
 
 }
