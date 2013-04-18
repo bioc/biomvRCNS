@@ -8,7 +8,7 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID='regionID', seggr=
 	options(ucscChromosomeNames=FALSE)
 	#check if there are more chrs, and no prange
 	if(length(unique(as.character(seqnames(exprgr))))>1 && is.null(prange)){
-		stop("More than 1 chr in the Grange object, yet no plot region defined! ")
+		stop("More than 1 chr in exprgr, yet no plot region defined! ")
 	}
 	if(is.null(prange)){
 		prange<-c(unique(as.character(seqnames(exprgr))), floor(min(start(exprgr))/1000)*1000, ceiling(max(end(exprgr))/1000)*1000)
@@ -41,8 +41,8 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID='regionID', seggr=
 		
 	# datatrack + 
 	if(plotstrand == '+' | plotstrand == '*'){
-		if(is.null(ylab)) ylab<-paste('E@+', sep='') else ylab<-paste(ylab, '@+', sep='')
-		dpTrack <- DataTrack(exprgr[seqnames(exprgr)==prange[1] & (strand(exprgr)=='+' | strand(exprgr)=='*') & start(exprgr) >= as.numeric(prange[2]) & end(exprgr) <= as.numeric(prange[3])],  name = ylab, background.title = "darkblue", type = c('p'),  legend = TRUE)				
+		ylabp<-ifelse(is.null(ylab), paste('E@+', sep=''), paste(ylab, '@+', sep=''))
+		dpTrack <- DataTrack(exprgr[seqnames(exprgr)==prange[1] & (strand(exprgr)=='+' | strand(exprgr)=='*') & start(exprgr) >= as.numeric(prange[2]) & end(exprgr) <= as.numeric(prange[3])],  name = ylabp, background.title = "darkblue", type = c('p'),  legend = TRUE)				
 		trackList<-append(trackList, dpTrack)
 		if(!is.null(seggr)){
 			# segmentation + as a separate state annotation
@@ -85,8 +85,8 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID='regionID', seggr=
 			trackList<-append(trackList, smTrack)
 		}
 		#datatrack - 
-		if(is.null(ylab)) ylab<-paste('E@-', sep='') else ylab<-paste(ylab, '@-', sep='')
-		dmTrack <- DataTrack(exprgr[seqnames(exprgr)==prange[1] & (strand(exprgr)=='-' | strand(exprgr)=='*') & start(exprgr) >= as.numeric(prange[2]) & end(exprgr) <= as.numeric(prange[3])], name = ylab, background.title = "darkblue", type = c('p'),   legend = TRUE)
+		ylabm<-ifelse(is.null(ylab), paste('E@-', sep=''), paste(ylab, '@-', sep=''))
+		dmTrack <- DataTrack(exprgr[seqnames(exprgr)==prange[1] & (strand(exprgr)=='-' | strand(exprgr)=='*') & start(exprgr) >= as.numeric(prange[2]) & end(exprgr) <= as.numeric(prange[3])], name = ylabm, background.title = "darkblue", type = c('p'),   legend = TRUE)
 		trackList<-append(trackList, dmTrack)	
 	}
 

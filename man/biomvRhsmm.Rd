@@ -36,7 +36,7 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
 	type of the emission distribution, only the following types are supported: 'norm', 'mvnorm', 'pois', 'nbinom', 'mvt', 't'
 }
   \item{xAnno}{
-	a optional \code{TranscriptDb} / \code{GRanges} / \code{GRangesList} object used in \code{\link{sojournAnno}} to infer parameters for the sojourn distribution 
+	a optional \code{TranscriptDb} / \code{GRanges} / \code{GRangesList} / \code{list} object used in \code{\link{sojournAnno}} to infer parameters for the sojourn distribution 
 }
   \item{soj.type}{
 	type of the sojourn distribution, only the following types are supported: 'nonpara', 'gamma', 'pois', 'nbinom'

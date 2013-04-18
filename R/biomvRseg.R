@@ -88,7 +88,8 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 	## initialize the output vectors
 	segStart <- vector(mode="list", length=nc)
 	segMean <- vector(mode="list", length=nc)
-	res<-GRanges(); #seqlevels(res)<-seqlevels(xRange)
+	res<-GRanges()
+	seqlevels(res)<-seqlevels(xRange)
 	
 	tmaxk<-maxk
 	# we have more than one seq to batch
@@ -184,6 +185,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 						AVG=as.numeric(sapply(1:length(Ilist$IS),  function(t) apply(as.matrix(x[Ilist$IS[t]:Ilist$IE[t],c]), 2, avgFunc, avg.m=avg.m, trim=trim, na.rm=na.rm)))
 					)
 					mcols(tores)<-DataFrame(values(tores), STATE=sapply(1:length(tores), function(i) ifelse(values(tores)[i, 'AVG']>avgFunc(x[r,c], avg.m=avg.m, trim=trim, na.rm=na.rm), 'HIGH', 'LOW')), row.names = NULL)
+					seqlevels(tores)<-seqlevels(xRange)
 					res<-c(res, tores)
 					cat(sprintf("No need to run step 2 merging, processing complete for column %s from group %s\n", c, g))
 					
@@ -223,6 +225,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 						AVG=as.numeric(sapply(1:length(Ilist$IS),  function(t) apply(as.matrix(x[Ilist$IS[t]:Ilist$IE[t],c]), 2, avgFunc, avg.m=avg.m, trim=trim, na.rm=na.rm)))
 					)
 					mcols(tores)<-DataFrame(values(tores), STATE=sapply(1:length(tores), function(i) ifelse(values(tores)[i, 'AVG']>avgFunc(x[r,c], avg.m=avg.m, trim=trim, na.rm=na.rm), 'HIGH', 'LOW')), row.names = NULL)
+					seqlevels(tores)<-seqlevels(xRange)
 					res<-c(res, tores)
 					cat(sprintf("Step 2 merging complete for column %s from group %s\n", c, g))
 				} # end 2nd step if
@@ -242,7 +245,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 	values(xRange)<-DataFrame(x,  row.names = NULL)
 	new("biomvRCNS",  
 		x = xRange, res = res,
-		param=list(maxk=tmaxk, maxseg=maxseg, maxbp=maxbp, family=family, penalty=penalty, group=grp, cluster.m=cluster.m, twoStep=twoStep, segDisp=segDisp, useMC=useMC, useSum=useSum, comVar=comVar, na.rm=na.rm, avg.m=avg.m, trim=trim, tol=tol)
+		param=list(maxk=tmaxk, maxseg=maxseg, maxbp=maxbp, family=family, penalty=penalty, grp=grp, cluster.m=cluster.m, twoStep=twoStep, segDisp=segDisp, useMC=useMC, useSum=useSum, comVar=comVar, na.rm=na.rm, avg.m=avg.m, trim=trim, tol=tol)
 	)
 
 }

@@ -168,7 +168,8 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 	# get seqnames status	
 	seqs<-unique(as.character(seqnames(xRange)))
 	## initialize the output vectors
-	res<-GRanges(); #seqlevels(res)<-seqlevels(xRange)
+	res<-GRanges()
+	seqlevels(res)<-seqlevels(xRange)
 	# we have more than one seq to batch
 	for(s in seq_along(seqs)){
 		cat(sprintf("Processing sequence %s\n", seqs[s]))
@@ -188,6 +189,7 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 								STATE=rep('HI', length(Ilist$IS)*sum(gi)), 
 								AVG=sapply(which(gi), function(c) sapply(seq_along(Ilist$IS), function(t) avgFunc(x[Ilist$IS[t]:Ilist$IE[t],c], avg.m=avg.m, trim=trim, na.rm=na.rm)))
 					)
+					seqlevels(tores)<-seqlevels(xRange)
 					res<-c(res, tores)					
 				}
 			} else {
@@ -201,6 +203,7 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 						STATE=rep(ifelse(high, 'HIGH', 'LOW'), length(Ilist$IS)), 
 						AVG=as.numeric(sapply(seq_along(Ilist$IS),  function(t) avgFunc(x[Ilist$IS[t]:Ilist$IE[t],c], avg.m=avg.m, trim=trim, na.rm=na.rm)))
 					)
+					seqlevels(tores)<-seqlevels(xRange)
 					res<-c(res, tores)	
 				}
 			}
@@ -214,9 +217,8 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 	values(xRange)<-DataFrame(x,  row.names = NULL)
 	new("biomvRCNS",  
 		x = xRange, res = res,
-		param=list(maxgap=maxgap, minrun=minrun, q=q, cutoff=cutoff, splitLen=splitLen, group=grp, cluster.m=cluster.m, poolGrp=poolGrp, avg.m=avg.m, trim=trim, na.rm=na.rm)
+		param=list(maxgap=maxgap, minrun=minrun, q=q, cutoff=cutoff, splitLen=splitLen, grp=grp, cluster.m=cluster.m, poolGrp=poolGrp, avg.m=avg.m, trim=trim, na.rm=na.rm)
 	)
-
 }
 
 
