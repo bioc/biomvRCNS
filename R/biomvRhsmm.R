@@ -65,9 +65,10 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	grp<-preClustGrp(x, grp=grp, cluster.m=cluster.m)
 	
 	# initial sojourn setup unifiy parameter input / density input,  using extra distance, non-integer value can give a dtype value
-	if(!is.null(xAnno) && !is.null(soj.type) && soj.type %in% c('gamma', 'pois', 'nbinom') && class(xAnno) %in% c('TranscriptDb', 'GRanges', 'GRangesList')){
+	if(!is.null(xAnno) && !is.null(soj.type) && soj.type %in% c('gamma', 'pois', 'nbinom') && class(xAnno) %in% c('TranscriptDb', 'GRanges', 'GRangesList', 'list')){
 		#	this is only used when the xAnno object contains appropriate annotation infromation which could be used as prior for the sojourn dist in the new HSMM model
-		# if xAnno is also present, then J will be estimated from xAnno, and pop a warning, ## this only make sense if difference exist in the distribution of sojourn of states.		
+		# if xAnno is also present, then J will be estimated from xAnno, and pop a warning, ## this only make sense if difference exist in the distribution of sojourn of states.	
+		# a further list object allow direct custom input for intial sojoun dist parameters., e.g. list(lambda=c(10, 50, 1000))
 		soj<-sojournAnno(xAnno, soj.type=soj.type)
 		J<-soj$J
 		cat('Estimated state number from xAnno: J = ', J, '\n', sep='')	
@@ -137,7 +138,8 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	
 	## initialize the output vectors
 	state <- matrix(NA, nrow=nr, ncol=nc)
-	res<-GRanges(); #seqlevels(res)<-seqlevels(xRange)
+	res<-GRanges()
+	seqlevels(res)<-seqlevels(xRange)
 	
 	# we have more than one seq to batch
 	for(s in seq_along(seqs)){
@@ -287,6 +289,7 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 						)
 					)
 			)
+	seqlevels(res)<-seqlevels(xRange)		
 	return(list(yhat=yhat, res=res))
 }
 
@@ -353,6 +356,23 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 		fttypes<-unique(unlist(fttypesL))
 		fttypes<-fttypes[order(fttypes)]
 		ftdist<-lapply(fttypes, function(t) unlist(lapply(1:ng, function(g) ftdist[[g]][[match(t, fttypesL[[g]])]])))
+	} else if (class(xAnno)=='list'){
+		# checking if input list has valid specs.
+		paramID<- names(xAnno) 
+		#check name fall into the right pool
+		paramIDok<- switch(soj.type,
+			nbinom = all( paramID %in% c('mu', 'size', 'shift')),
+			pois = all( paramID %in% c('lambda', 'shift')),
+			gamma = all( paramID %in% c('scale', 'shape')),
+			stop("Invalid argument value for 'soj.type'! ")
+		)
+		#check length of vectos match
+		J<-unique(sapply(xAnno, length))
+		if(length(J)!=1) {
+			stop("Length of vectors in xAnno are not equal, can't get valid state number J!")
+		}
+		soj<-append(xAnno, list(type = soj.type, J=J))
+		return(soj)
 	}
 	
 	# should switch here between different soj.type	

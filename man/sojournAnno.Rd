@@ -12,7 +12,7 @@ sojournAnno(xAnno, soj.type = "gamma", pbdist = NULL)
 
 \arguments{
   \item{xAnno}{
-	a \code{GRanges} / \code{GRangesList} /  \code{TranscriptDb} object, with its first meta column to represent the possible type of the range
+	a \code{GRanges} / \code{GRangesList} / \code{TranscriptDb} object, with its first meta column to represent the possible type of the range; Or a \code{list} object with named initial value vectors matching required parameters for a specific \code{soj.type}
 }
   \item{soj.type}{
 	type of the sojourn distribution, following types are supported: 'gamma', 'pois', 'nbinom'
