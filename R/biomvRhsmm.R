@@ -336,6 +336,12 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 		#3 feature type, exon, intron, intergenic
 		transc <- transcripts(xAnno) # this give you all cds ranges ungroupped
 		intergenic<-gaps(transc)
+		
+		# gaps() will by default produce extra * ranges and full range for empty chr
+		# https://stat.ethz.ch/pipermail/bioconductor/2013-May/052976.html
+		intergenic[strand(intergenic)!='*']
+		intergenic<-intergenic[which(width(intergenic) != seqlengths(intergenic)[as.character(seqnames(intergenic))])]
+		
 		exon <- exons(xAnno) # this give you all exon ranges ungroupped
 		intron<- unlist(intronsByTranscript(xAnno))
 		ftdist<-list(intergenic=width(intergenic), intron=width(intron), exon=width(exon))
