@@ -54,7 +54,7 @@ To begin with \Rpackage{biomvRCNS}, load the package and read the manual page.
 library(biomvRCNS)
 @
 <<setwidth, echo=FALSE>>=
-options(width = 70)
+options(width = 95)
 @
 
 
@@ -70,7 +70,7 @@ Currently the package does not deal with data correction, so input should be nor
 %
 
 
-Extracted from packge \Rpackage{DNACopy}, the \Robject{coriell} data contains two aCGH studies (GM05296 and GM13330) 
+Extracted from packge \Rpackage{DNACopy} \citep{cbsdnacopy}, the \Robject{coriell} data contains two aCGH studies (GM05296 and GM13330) 
 of Corriel cell lines taken from \citet{snijders2001assembly}.
 In particular, with 2271 mapped features in total across 22 autosomes and chromosome X. 
 
@@ -112,7 +112,7 @@ By default, all data columns are assumed to be from the same group.
 
 <<coriellHsmm, results=hide>>=
 rhsmm<-biomvRhsmm(x=xgr, maxbp=4E4, J=3, soj.type='gamma', 
-	emis.type='norm', grp=c(1,2))
+	emis.type='norm', prior.m='quantile', grp=c(1,2))
 @ 
 <<coriellHsmmres>>=
 show(rhsmm)
@@ -128,7 +128,7 @@ In this way the sojourn distribution fully incorporate the positional informatio
 Argument \Rfunarg{emis.type} controls the distribution of emission probability, 
 in this case the log2 ratio of aCGH data is considered to follow Normal distribution. 
 The function will then call C codes and estimate the most likely state sequence, with either \Rfunarg{cMethod='F-B'} or \Rfunarg{cMethod='Viterbi'}. 
-The \Rfunarg{F-B} method uses a forward-backward algorithm described in \citet{Guedon2003}, 
+The \Rfunarg{F-B} method (default) uses a forward-backward algorithm described in \citet{Guedon2003}, 
 which gives a smooth state sequences, whereas the Viterbi algorithm with \Rfunarg{cMethod='Viterbi'} 
 will use the states profile estimated by the forward-backward algorithm and rebuild the most likely state sequence.
 The function returns an object of class \Rclass{biomvRCNS}, in which the \Robject{res} slot 
@@ -148,8 +148,8 @@ Here we set \Rfunarg{tofile=FALSE} to output graphics to the current device, and
 \begin{center}
 <<coriellHsmmplot, fig=TRUE, echo=FALSE>>=
 biomvRGviz(exprgr=xgr[seqnames(xgr)=='chr1', 'Coriell.13330'], 
-  seggr=rhsmm@res[mcols(rhsmm@res)[,'SAMPLE']=='Coriell.13330'], 
-  regionID='region',  tofile=FALSE)
+	seggr=rhsmm@res[mcols(rhsmm@res)[,'SAMPLE']=='Coriell.13330'], 
+	regionID='region',  tofile=FALSE)
 @ 
 \end{center}
 
@@ -275,13 +275,13 @@ we here use estimates from other data source as a prior. We load the \Rpackage{T
 and pass the \Rclass{TranscriptDb} object to \Rfunarg{xAnno}.  Then internally sojourn parameters and state number \Rfunarg{J} 
 will be estimated from \Rfunarg{xAnno} by calling function \Rfunction{sojournAnno}. 
 When given a  \Rclass{TranscriptDb} object to \Rfunarg{xAnno}, state number would be set to 3 and each represents 'intergenic', 'intron', 'exon'. 
-One can also supply a named \Rclass{list} object with initial values for paramters of distribution specified by \Rfunarg{soj.type}.
+One can also supply a named \Rclass{list} object with initial values for parameters of distribution specified by \Rfunarg{soj.type}.
 
 <<ENCODEHsmmTxDbSojourn, results=hide>>=
 library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 txdb<-TxDb.Hsapiens.UCSC.hg19.knownGene	
 rhsmm<-biomvRhsmm(x=cgr, xAnno=txdb, maxbp=1E3, soj.type='gamma', 
-	emis.type='pois', cMethod='F-B', q.alpha=0.01)
+	emis.type='pois', prior.m='quantile', q.alpha=0.01)
 @
 
 
@@ -295,15 +295,15 @@ rhsmm@res[mcols(rhsmm@res)[,'STATE']=='exon']
 @
 
 \begin{center}
-<<plotENCODEHsmmG, fig=TRUE, echo=FALSE>>=
+<<plotENCODEHsmmG, fig=TRUE>>=
 g<-mcols(rhsmm@res)[,'STATE']=='exon' & mcols(rhsmm@res)[,'SAMPLE']=='Gm12878'
 biomvRGviz(exprgr=cgr[,'Gm12878'], gmgr=gmgr, 
-  seggr=rhsmm@res[g], plotstrand='-', regionID='TP53',  tofile=FALSE)
+	seggr=rhsmm@res[g], plotstrand='-', regionID='TP53',  tofile=FALSE)
 @ 
 \end{center}
 
 \begin{center}
-<<plotENCODEHsmmK, fig=TRUE, echo=FALSE>>=
+<<plotENCODEHsmmK, fig=TRUE>>=
 k<-mcols(rhsmm@res)[,'STATE']=='exon' & mcols(rhsmm@res)[,'SAMPLE']=='K562'
 biomvRGviz(exprgr=cgr[,'K562'], gmgr=gmgr, 
   seggr=rhsmm@res[k], plotstrand='-', regionID='TP53', tofile=FALSE)
@@ -327,6 +327,61 @@ The other 2 batch functions could also be similarly applied here.
 rseg<-biomvRseg(x=cgr, maxbp=1E3, maxseg=20, family='pois')
 rmgmr<-biomvRmgmr(x=cgr, q=0.99, maxgap=50, minrun=100)
 @
+
+
+\section{Example of detection of differentially methylated region (DMR)}
+
+As an example, we include a toy dataset extracted from \Rpackage{BiSeq} \citep{biseq},
+which is a small subset of a published study \citep{variodata}, 
+comprising intermediate differential methylation results prior to DMRs detection.
+We first load the \Robject{variosm} data, the data contains a \Rclass{GRanges} object \Robject{variosm} 
+with two meta columns: '\Robject{meth.diff}', smoothed methylation difference between the two sample groups;
+\Robject{'p.val'}, significance level from the Wald test. 
+What we show here latter could be applied on other pipeline as well, using similar data input.
+
+<<variodata>>=
+data(variosm)
+head(variosm, n=3)
+@
+
+In the \Rpackage{BiSeq} work-flow, they use an approach similar to the max-gap-min-run algorithm 
+to define the DMRs boundaries, by prior filtering and comparing the differential test statistics with a 
+user specified significance level. We now use the \Rfunction{biomvRhsmm} model to detect DMRs, 
+since there are mainly two types of measurement associated with differential methylation studies like we have here, 
+one is the difference in the methylation ratio and the other one is the significance level from differential test.
+The methylation difference gives information about the directionality of the change as well as the size, 
+and the significance level gives the confidence in claiming differential events. 
+
+
+So here we utilize both information for the DMRs detection. We implicitly ask the model to give 3 states, 
+since \Rfunarg{J} is default to 3, in which case the three states may each represent hypomethylated regions, 
+undefined null regions, and hypermethylated regions respectively when modelling \Robject{meth.diff};
+While modelling significance level these states would represent highly confident regions, lowly confident regions or / and  null results.
+For both scenarios, we are more interested in extreme states where we have large absolute differences and low P-values, 
+thus we set the parameter \Rfunarg{r.var}=0.05 to be more extreme allowing small variation in those states, to keep the confidence high.
+
+<<varioHsmmrun, results=hide>>=
+rhsmm<-biomvRhsmm(x=variosm, maxbp=100, prior.m='quantile', r.var=0.05)
+@ 
+
+<<finddmr>>=
+hiDiffgr<-rhsmm@res[mcols(rhsmm@res)[,'STATE']!=2 
+	& mcols(rhsmm@res)[,'SAMPLE']=='meth.diff']
+loPgr<-rhsmm@res[mcols(rhsmm@res)[,'STATE']==1
+	& mcols(rhsmm@res)[,'SAMPLE']=='p.val']
+DMRs<-intersect(hiDiffgr, loPgr)
+idx<-findOverlaps(variosm, DMRs, type='within')
+mcols(DMRs)<-DataFrame(aggregate(as.data.frame(mcols(variosm[idx@queryHits])), 
+	by=list(DMR=idx@subjectHits), FUN=median))
+DMRs
+@
+
+After the model fitting, by intersecting regions with extreme \Robject{meth.diff} and regions with low \Robject{p.val}, 
+we can locate those detected DMRs, returned with their average \Robject{meth.diff} and \Robject{p.val}. Comparing to 
+the regions detected in the \Rpackage{BiSeq} vignette, the two sets of regions are largely similar except for one region
+(chr1:872335,872386), which in our case the \Robject{meth.diff} has not been considered high enough. 
+However it is worth mentioning that due to the filtering applied in their work-flow, they built wider regions out of a smaller set of
+more significant sites; while in our case, the regions are more refined and especially we identified two hypomethylated regions.
 
 
 \section{More}

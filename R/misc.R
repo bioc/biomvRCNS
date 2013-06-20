@@ -1,73 +1,64 @@
 ##################################################
 #			segmentation functions
 ##################################################
-simmvRsegData<-function(nr=50, nc=10, N=c(3,4), family='norm', comVar=TRUE, segDisp=FALSE){
-	set.seed(1234)
-	## input check
-	family<-match.arg(family, c('norm', 'pois', 'nbinom'))
-	if(max(N)<nr && min(N)>1 && length(N)<=nc && length(N)>=1){
-		ng<-as.integer(rep(seq(1:length(N)), each=ceiling(nc/length(N)))[1:nc])
-	} else {
-		stop('number of changes per group not in range, or more groups than data column !')
-	}
-	
-	## generate random change position
-	segs<-lapply(N, function(x) ceiling(seq(from=2, to=nr-nr/x, length.out=x)+runif(x, 1, nr/x/2))) # generate initial change point for each grp
-	segs<-lapply(ng, function(x) segs[[x]]) # expand to a nc length list, and have each ordered
-	segs<-lapply(segs, function(x) x+floor(runif(length(x))*2)) #jitter a bit
-	rege<- lapply(segs, function(x) c(x-1, nr))
-	regs<-lapply(segs, function(x) c(1, x))
-	
-	## generate mean for each segment
-	regm<-lapply(N+1, function(x) ceiling(runif(x, 5, 10)+rep(c(-1,1), x)[1:x]*runif(x, 1, 3)))
-	regm<-lapply(ng, function(x) regm[[x]])
-	
-	## generate size factor for nbinom, alpha(dispersion) = 1/regd
-	if(family=='nbinom'){
-		if(segDisp){
-			regd<-lapply(N+1, function(x) runif(x, 50, 150))
-		} else {
-			regd<-lapply(N+1, function(x) rep(runif(1, 50, 150), x))
-		}
-		regd<-lapply(ng, function(x) regd[[x]])
-	} else {
-		regd <- vector(mode="list", length=nc)
-	}
-	
-	if(family=='norm'){
-		if(comVar){
-			regsd<-lapply(N+1, function(x) rep(runif(1, 1, 3), x))
-		} else {
-			regsd<-lapply(N+1, function(x) runif(x, 1, 3))	
-		}
-		regsd<-lapply(ng, function(x) regsd[[x]])
-	} else {
-		regsd <- vector(mode="list", length=nc)
-	}
-	
-	## simulate according to the family
-	x<-matrix(, nrow=nr, ncol=nc)
-	for(i in seq_len(nc)){
-		x[,i]<-unlist(lapply(seq_len(length(regm[[i]])), function(x) simUniSegData(n=rege[[i]][x]-regs[[i]][x]+1, mu=regm[[i]][x], sd=regsd[[i]][x], size=regd[[i]][x], family=family)))
-	}
+simSegData<-function(nseg=10, J=3, soj, emis, seed=1234, toPlot=FALSE){
+	# focus on the soj settings,
+	# keep the difference between emission of different states small
 
-	## return simulated object
-#	new("biomvRseg",
-#    x = x,
-#    segStart = segs,
-#    segMean=regm,
-#    group=ng,
-#    family=family)
-	return(list(x=x, segStart=segs, segMean=regm, group=ng))
+	# pool of segements for each states to sample from
+	#check J to see if it conforms with soj and emis
+	if(!is.null(soj)){
+		if(! soj$type %in% c('gamma', 'pois', 'nbinom')){
+			stop("soj type not supported")
+		}
+		paraLen<-sapply(soj, length)
+		if(! all(paraLen[names(paraLen)!='type']==J)){
+			stop("incorrect length for the soj parameter")
+		}
+	}
+	if(!is.null(emis)){
+		if(! emis$type %in% c('norm', 't', 'pois','nbinom')){
+			stop("emis type not supported")
+		}
+		paraLen<-sapply(emis, length)
+		if(!all(paraLen[names(paraLen)!='type']==J)){
+			stop("incorrect length for the emis parameter")
+		}
+	}	
+
+	# generae pool of segments, with soj related length, and states related signal
+	segLen<-sapply(1:J, function(j) simUvSegData(nseg, j, soj, seed))
+	segExp<-sapply(1:J, function(j) sapply(segLen[,j], function(l) simUvSegData(l, j, emis)))
+	
+	sel<-sample(1:J, size=nseg, replace=T)
+	states<-runValue(Rle(sel))
+	nsel<-length(states)
+	
+	L<-segLen[(states-1)*nseg+1:nsel]
+	E<-unlist(segExp[(states-1)*nseg+1:nsel])
+	
+	res<-list(L=L,E=E,S=states)
+	if(toPlot){
+		filename<-paste('Simulation.', gsub(':', '-', gsub(' ', '_', date())) ,'.pdf', sep='')
+		pdf(filename)
+		ts.plot(E)
+		dev.off()
+		res<-c(res, pdf=filename)
+	}
+	return(res)
 }
 
 
-simUniSegData<-function(n, mu, sd, size, family){
-		x<-switch(family,
-			norm = rnorm(n, mean=mu, sd=sd),
-			pois = rpois(n, lambda=mu),
-			nbinom = rnbinom(n, mu=mu, size=size))
+simUvSegData<-function(n, j, param, seed=NULL){
+	if(!is.null(seed))	set.seed(seed)
+	x<-switch(param$type,
+		norm = rnorm(n, mean=param$mean[j], sd=param$sd[j]),
+		t = rt(n, ncp=param$ncp[j], df=param$df[j]),
+		gamma = rgamma(n, shape=param$shape[j], scale=param$scale[j]),
+		pois = rpois(n, lambda=param$lambda[j]),
+		nbinom = rnbinom(n, mu=param$mu[j], size=param$size[j]))
 }
+
 
 mat2list<-function(x, nr=NULL){
 	if(!is.null(nr)) x<-matrix(x, nrow=nr)
@@ -122,7 +113,7 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 		xid<-colnames(x)
 		x<-as.matrix(x)
 	} else {
-		warning('No dim attributes, coercing x to a matrix with 1 column !!!')
+		cat('No dim attributes, coercing x to a matrix with 1 column.\n')
 		x <- matrix(as.numeric(x), ncol=1)
 	}
 	nr<-nrow(x) 
@@ -143,11 +134,11 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 		}
 	} else {
 		# no valid xRange, set it to null
-		warning('No valid xRange and usePos found, re-check if you have specified xRange / usePos.')
+		cat('no valid xRange and usePos found, check if you have specified xRange / usePos.\n')
 		xRange<- NULL
 	} 
 	if (is.null(xPos) || !is.numeric(xPos) || length(xPos)!=nr){
-		warnings("No valid positional information found. Re-check if you have specified any xPos / xRange.")
+		cat("No valid positional information found. Re-check if you have specified any xPos / xRange.\n")
 		xPos<-NULL
 	}
  
@@ -249,14 +240,14 @@ maxGapminRun<-function(x, xPos=NULL, xRange=NULL, cutoff=NULL, q=0.9, high=TRUE,
 	
 	if(!is.null(xPos) && is.null(xRange)){
 		if(!is.numeric(xPos)) stop("xPos is not numeric!")
-		if(n!=length(xPos)) stop("the length of xPos doesnot match the length of x!")
+		if(n!=length(xPos)) stop("the length of xPos doesn't match the length of x!")
 		if(all((xPos[-1]-xPos[-n])>maxgap) | (xPos[n]-xPos[1])<minrun)
-			warnings("maxgap and minrun values are not approprate !!")
+			warnings("maxgap and minrun values are not appropriate !!")
 	} else if (is.null(xPos) && !is.null(xRange)){
 		if(class(xRange) !='IRanges') stop("xRange is not a IRange object!")
-		if(n!=length(xRange)) stop("the length of xRange doesnot match the length of x!")
+		if(n!=length(xRange)) stop("the length of xRange doesn't match the length of x!")
 		if(all(start(xRange)[-1]-end(xRange)[-n] > maxgap) | (end(xRange)[n]- start(xRange)[1]) < minrun)
-			warnings("maxgap and minrun values are not approprate !!")
+			warnings("maxgap and minrun values are not appropriate !!")
 	}
 	
 	
@@ -442,7 +433,7 @@ nbinomCLLDD<-function(x, wt=NULL, s=0){
 }
 
 tmvtfFit<-function(x, wt=NULL){
-	#Aeschliman, C., Park, J., & Kak, A. (2010). A novel parameter estimation algorithm for the multivariate t-distribution and its application to computer vision. Computer Vision–ECCV 2010, 594-607.
+	#Aeschliman, C., Park, J., & Kak, A. (2010). A novel parameter estimation algorithm for the multivariate t-distribution and its application to computer vision. Computer Vision-ECCV 2010, 594-607.
 	if(!is.matrix(x))	x<-matrix(x)
 	n<-nrow(x)
 	p<-ncol(x)

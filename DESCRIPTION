@@ -1,8 +1,8 @@
 Package: biomvRCNS
 Type: Package
 Title: Copy Number study and Segmentation for multivariate biological data
-Version: 1.1.1
-Date: 2013-04-18
+Version: 1.1.2
+Date: 2013-06-20
 Author: Yang Du
 Maintainer: Yang Du <duyang@fbn-dummerstorf.de>
 Description: In this package, a Hidden Semi Markov Model (HSMM) and one homogeneous 
@@ -13,7 +13,7 @@ License: GPL (>= 2)
 LazyLoad: yes
 Imports: methods, mvtnorm
 Depends: IRanges, GenomicRanges, Gviz
-Suggests: parallel, GenomicFeatures, dynamicTreeCut, Rsamtools, 
+Suggests: cluster, parallel, GenomicFeatures, dynamicTreeCut, Rsamtools, 
 	TxDb.Hsapiens.UCSC.hg19.knownGene
 biocViews: aCGH, CopyNumberVariants, Microarray, HighThroughputSequencing, 
 	Sequencing, Visualization, Genetics

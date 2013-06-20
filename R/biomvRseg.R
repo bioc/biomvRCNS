@@ -20,7 +20,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 		xid<-colnames(x)
 		x<-as.matrix(x)
 	} else {
-		warning('No dim attributes, coercing x to a matrix with 1 column !!!')
+		cat('No dim attributes, coercing x to a matrix with 1 column.\n')
 		x <- matrix(as.numeric(x), ncol=1)
 	}
 	nr<-nrow(x) 
@@ -41,11 +41,11 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 		}
 	} else {
 		# no valid xRange, set it to null
-		warning('No valid xRange and usePos found, re-check if you have specified xRange / usePos.')
+		cat('no valid xRange and usePos found, check if you have specified xRange / usePos.\n')
 		xRange<- NULL
 	} 
 	if (is.null(xPos) || !is.numeric(xPos) || length(xPos)!=nr){
-		warnings("No valid positional information found. Re-check if you have specified any xPos / xRange.")
+		cat("No valid positional information found. Re-check if you have specified any xPos / xRange.\n")
 		xPos<-NULL
 	}
 	if (!is.null(maxbp) && (!is.numeric(maxbp) || (length(maxbp) != 1) || (maxbp <= 1) ||  ( !is.null(xPos) && maxbp > max(xPos,na.rm=na.rm)-min(xPos, na.rm=na.rm)))) 
@@ -288,7 +288,7 @@ regionSegCost<-function(x, maxk=NULL, segs=NULL, family=NULL, alpha=NULL, useSum
     ## add a checking for useSum in norm models
     if(d==1 && !useSum){
     	useSum<-TRUE
-    	warning("For univariate normal data, 'useSum' reset to TRUE, though result should be identical.")
+    	cat("For univariate normal data, 'useSum' reset to TRUE, though result should be identical.\n")
     }
     
     ## check input parameter maxk and segs
@@ -309,7 +309,7 @@ regionSegCost<-function(x, maxk=NULL, segs=NULL, family=NULL, alpha=NULL, useSum
     	N<-length(segs)+1
      	if (!is.null(maxk)){
      		# both specified, offer a warning
-     		warning(sprintf("Both 'maxk' and 'segs' are specified, maxk would be overriden with lenth(segs)+1=%d", N))
+     		warning(sprintf("Both 'maxk' and 'segs' are specified, maxk would be overridden with length(segs)+1=%d", N))
      	}
      	maxk<-N 
      } else {

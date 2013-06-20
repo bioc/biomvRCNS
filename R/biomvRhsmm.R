@@ -5,7 +5,7 @@
 ##################################################
 # re-implement HSMM, one more slot to handle distance array
 ##################################################
-biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', trim=0, na.rm=TRUE){
+biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', prior.m = 'cluster', trim=0, na.rm=TRUE){
 	## input checking
 	# lock.transition / lock.d, lock transition and sojourn #fixme
 	# est.method=c('viterbi', 'smooth')
@@ -23,7 +23,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 		xid<-colnames(x)
 		x<-as.matrix(x)
 	} else {
-		warning('No dim attributes, coercing x to a matrix with 1 column !!!')
+		cat('No dim attributes, coercing x to a matrix with 1 column.\n')
 		x <- matrix(as.numeric(x), ncol=1)
 	}
 	nr<-nrow(x) 
@@ -35,6 +35,9 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	
 	if (is.null(cMethod) || !(cMethod %in% c('F-B', 'Viterbi'))) 
 		stop("'cMethod' must be specified, must be either 'F-B' or 'Viterbi'!")
+		
+	if (is.null(prior.m) || !(prior.m %in% c('quantile', 'cluster'))) 
+		stop("'prior.m' must be specified, must be either 'quantile' or 'cluster'!")	
 
 	if (is.null(emis.type) || !(emis.type %in% c('norm', 'mvnorm', 'pois', 'nbinom', 'mvt', 't'))) 
 		stop("'emis.type' must be specified, must be one of 'norm', 'mvnorm', 'pois', 'nbinom', 'mvt', 't'!")
@@ -50,15 +53,15 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 		}
 	} else {
 		# no valid xRange, set it to null
-		warning('no valid xRange and usePos found, check if you have specified xRange / usePos.')
+		cat('no valid xRange and usePos found, check if you have specified xRange / usePos.\n')
 		xRange<- NULL
 	} 
 	if (is.null(xPos) || !is.numeric(xPos) || length(xPos)!=nr){
-		warnings("No valid positional information found. Re-check if you have specified any xPos / xRange.")
+		cat("No valid positional information found. Re-check if you have specified any xPos / xRange.\n")
 		xPos<-NULL
 	}
 	if (!is.null(maxbp) && (!is.numeric(maxbp) || (length(maxbp) != 1) || (maxbp <= 1) ||  ( !is.null(xPos) && maxbp > max(xPos,na.rm=na.rm)-min(xPos, na.rm=na.rm)))) 
-	 	 stop(sprintf("'maxbp' must be a single integer between 2 and the maximum length of the region if xPos is avaliable."))	
+	 	 stop(sprintf("'maxbp' must be a single integer between 2 and the maximum length of the region if xPos is avaliable!"))	
 	
 	# check grp setting, cluster if needed, otherwise treat as one group
 	if(!is.null(grp)) grp<-as.character(grp)
@@ -84,13 +87,13 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 		}
 #		soj<-append(soj, maxbp=maxbp) 
 	} else if(is.numeric(J) && J>1){
-		cat('xAnno is not present or not supported, try to use maxbp/maxk in the uniform prior for the sojourn distribution!\n') 
+		cat('xAnno is not present or not supported, try to use maxbp/maxk in the uniform prior for the sojourn distribution.\n') 
 		# J is ok
 		if(is.null(xPos)){
 			# no position as well, in turn means no xRange nor multiple seq, 
 			# init if J and maxk are ok
 			if (!is.null(maxk) && is.numeric(maxk) && (length(maxk) == 1) && (maxk > 1) &&  (maxk < nr)) {
-				warning('maxbp and xPos are not present or not valid, using maxk for the sojourn distribution !!!')
+				cat('maxbp and xPos are not present or not valid, using maxk for the sojourn distribution.\n')
 				soj<-list(d = unifMJ(maxk, J), type = soj.type, J=J, maxk=maxk)
 			} else {
 				stop(sprintf("'maxk' must be a single integer between 2 and the number of rows of 'x': %d.", nr))
@@ -164,12 +167,12 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 			if(iterative){
 				for(c in which(gi)){
 					cat(sprintf("step 1 building HSMM for seq %s in column %s.\n", seqs[s], c))
-					runout<-hsmmRun(x[r,c], xid[c], xRange[r], ssoj, emis.type, q.alpha, r.var, cMethod, maxit, maxgap,  tol, avg.m=avg.m, trim=trim, na.rm=na.rm) 	
+					runout<-hsmmRun(x[r,c], xid[c], xRange[r], ssoj, emis.type, q.alpha, r.var, cMethod, maxit, maxgap,  tol, avg.m=avg.m, prior.m=prior.m, trim=trim, na.rm=na.rm) 	
 					res<-c(res, runout$res)
 					state[r, c]<-runout$yhat
 				}
 			} else {
-				runout<-hsmmRun(x[r,gi], xid[gi], xRange[r], ssoj, emis.type, q.alpha, r.var, cMethod, maxit, maxgap, tol, avg.m=avg.m, trim=trim, na.rm=na.rm)	
+				runout<-hsmmRun(x[r,gi], xid[gi], xRange[r], ssoj, emis.type, q.alpha, r.var, cMethod, maxit, maxgap, tol, avg.m=avg.m, prior.m=prior.m, trim=trim, na.rm=na.rm)	
 				res<-c(res, runout$res)
 				state[r, gi]<-runout$yhat
 			}
@@ -181,14 +184,14 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	values(xRange)<-DataFrame(x, state, row.names = NULL)
 	new("biomvRCNS",  
 		x = xRange, res = res,
-		param=list(J=J, maxk=maxk, maxbp=maxbp, maxgap=maxgap, soj.type=soj.type, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var, iterative=iterative, cMethod=cMethod, maxit=maxit, tol=tol, grp=grp, cluster.m=cluster.m, avg.m=avg.m, trim=trim, na.rm=na.rm)
+		param=list(J=J, maxk=maxk, maxbp=maxbp, maxgap=maxgap, soj.type=soj.type, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var, iterative=iterative, cMethod=cMethod, maxit=maxit, tol=tol, grp=grp, cluster.m=cluster.m, avg.m=avg.m, prior.m=prior.m, trim=trim, na.rm=na.rm)
 	)
 }
 
 
 
-hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol= 1e-6, avg.m='median', trim=0, na.rm=TRUE){
-	# now x should be a one column matrix
+hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol= 1e-6, avg.m='median', prior.m='cluster', trim=0, na.rm=TRUE){
+	# now x should be a matrix, when emis.type=mvt or mvnorm, ncol>1
 	if(is.null(dim(x))) x<-matrix(x)
 	colnames(x)<-xid
 	nr<-nrow(x)
@@ -203,17 +206,43 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 	
 	# initialize emission parameters, either from user input or raw data
 	emis<-list(type=emis.type)
-	emis$mu <- estEmisMu(x, J, q.alpha=q.alpha)
-	if(emis$type == 'norm' || emis$type== 'mvnorm' || emis$type == 'mvt') {
-		emis$var <- estEmisVar(x, J, r.var=r.var)
+
+	if (prior.m == 'cluster'){
+		# alternative to use clustering, and a sanity check, fall back if not there
+		if(length(find.package('cluster', quiet=T))==0) {
+			warning("'cluster' is not found, fall back to quantile method!!!")
+			prior.m <- 'quantile'
+		}
+		require(cluster)
+		xclust<-clara(x, J)
+		if(ncol(x)>1){
+			if(emis$type == 'norm' || emis$type== 'mvnorm' || emis$type == 'mvt') {
+				emis$var<-lapply(1:J, function(j) cov(x[xclust$clustering==j,]))
+			} 
+			emis$mu<-lapply(1:J, function(j) xclust$medoids[j,])
+		} else {
+			if(emis$type == 'norm' || emis$type== 'mvnorm' || emis$type == 'mvt') {
+				emis$var<-sapply(1:J, function(j) var(x[xclust$clustering==j,]))
+				emis$var[is.na(emis$var)]<-mean(emis$var[!is.na(emis$var)])
+			}
+			emis$mu<-as.numeric(xclust$medoids)
+		}	
 	}
+	
+	# old quantile method
+	if(prior.m == 'quantile'){
+		emis$mu <- estEmisMu(x, J, q.alpha=q.alpha)
+		if(emis$type == 'norm' || emis$type== 'mvnorm' || emis$type == 'mvt') {
+			emis$var <- estEmisVar(x, J, r.var=r.var)
+		}
+	}	
 	if (emis$type == 'nbinom'){
 		emis$size <- rep(estimateSegCommonDisp(x), J) # common prior
 	}
 	if (emis$type == 't' || emis$type == 'mvt'){
 		emis$df <- rep(1, J) # common prior
 	}
-	# switch est.method 
+
 	#estimation of most likely state sequence
 	#define likelihood
 	ll <- rep(NA,maxit)
@@ -248,7 +277,8 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 			break()	
 		}
 	}	 # end for maxit
-
+	
+	# switch cMethod
 	if (cMethod=='Viterbi'){
 		emis<-initEmis(emis=emis, x=x)
 		
@@ -560,7 +590,7 @@ estEmisMu<- function(x, J, q.alpha=0.05, na.rm=TRUE){
 # to estimate segment wise variance vector / covariance matrix list
 ##################################################
 estEmisVar<-function(x, J=3, na.rm=TRUE, r.var=0.75){
-	# r.var is the espected ration of variance for state 1 and J versus any intermediate states
+	# r.var is the espected ratio of variance for state 1 and J versus any intermediate states
 	# a value larger than 1 tend to give more extreme states;  a value smaller than 1 will decrease the probablity of having extreme state, pushing it to the center.
 	nc<-ncol(x)
 	f.var<-rep(ifelse(r.var>=1, 1, r.var), J)
@@ -577,10 +607,14 @@ estEmisVar<-function(x, J=3, na.rm=TRUE, r.var=0.75){
 			# multiple
 			if(na.rm) na.rm<-'complete.obs'
 			ret<-lapply(1:J, function(j) cov(x, use=na.rm)*f.var[j])
+			### alternative to use clustering
+			###ccll<-clara(x)
+			###ret<-sapply(1:J, function(j) cov(x[ccll$clustering==j,], use=na.rm))
 		}
 	} else {
 		ret<-var(as.numeric(x), na.rm=na.rm)
 	}
+	
 	return(ret)
 }
 ##################################################
