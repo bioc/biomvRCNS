@@ -9,7 +9,7 @@ export(
 	biomvRhsmm, hsmmRun, sojournAnno,
 	biomvRseg, regionSegCost, regionSegAlphaNB,
 	biomvRmgmr, maxGapminRun,
-	biomvRGviz, splitFarNeighbour, simmvRsegData
+	biomvRGviz, splitFarNeighbour, simSegData
 )
 
 exportMethods(

@@ -1,15 +1,14 @@
-CHANGES IN VERSION 1.0.1
+CHANGES IN VERSION 1.0.2
 -------------------------
 
 NEW FEATURES
 
-    o add support of direct input of sojourn parameters as named list.
+    o add a new clustering method for emission prior estimation
+    o add a new example section of DMR detection in the vignette
     
 BUG FIXES
 
-    o suppress warnings generated when appending GRanges object for the output
-    o fix redundant @+ in the ylab for - strand
-
+    o switch off several data checking warnings, use normal cat() instead
 CHANGES IN VERSION 0.99.3
 -------------------------
 
