@@ -1,3 +1,11 @@
+CHANGES IN VERSION 1.1.3
+-------------------------
+
+NEW FEATURES
+
+    o the x slot in the returning object for biomvRhsmm now also contains the probability of associated state for each position
+    o the param slot in the returning object for biomvRhsmm now also contains the updated emission and sojourn parameters for each seqname and sample column
+ 
 CHANGES IN VERSION 1.1.2
 -------------------------
 

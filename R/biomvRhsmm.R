@@ -1,8 +1,4 @@
 ##################################################
-# retain non-parametric, possion, gamma, and nbinom for the sojourn dist, these could be directly fork from mhsmm
-##################################################
-
-##################################################
 # re-implement HSMM, one more slot to handle distance array
 ##################################################
 biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', prior.m = 'cluster', trim=0, na.rm=TRUE){
@@ -42,7 +38,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	if (is.null(emis.type) || !(emis.type %in% c('norm', 'mvnorm', 'pois', 'nbinom', 'mvt', 't'))) 
 		stop("'emis.type' must be specified, must be one of 'norm', 'mvnorm', 'pois', 'nbinom', 'mvt', 't'!")
 
-	## some checking on xpos and xrange, xrange exist then xpos drived from xrange,
+	## some checking on xpos and xrange, xrange exist then xpos derived from xrange,
 	if(!is.null(xRange) && (class(xRange)=='GRanges' || class(xRange)=='IRanges') && !is.null(usePos) && length(xRange)==nr && usePos %in% c('start', 'end', 'mid')){
 		if(usePos=='start'){
 			xPos<-start(xRange)
@@ -67,11 +63,11 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	if(!is.null(grp)) grp<-as.character(grp)
 	grp<-preClustGrp(x, grp=grp, cluster.m=cluster.m)
 	
-	# initial sojourn setup unifiy parameter input / density input,  using extra distance, non-integer value can give a dtype value
+	# initial sojourn setup unify parameter input / density input,  using extra distance, non-integer value can give a dtype value
 	if(!is.null(xAnno) && !is.null(soj.type) && soj.type %in% c('gamma', 'pois', 'nbinom') && class(xAnno) %in% c('TranscriptDb', 'GRanges', 'GRangesList', 'list')){
 		#	this is only used when the xAnno object contains appropriate annotation infromation which could be used as prior for the sojourn dist in the new HSMM model
 		# if xAnno is also present, then J will be estimated from xAnno, and pop a warning, ## this only make sense if difference exist in the distribution of sojourn of states.	
-		# a further list object allow direct custom input for intial sojoun dist parameters., e.g. list(lambda=c(10, 50, 1000))
+		# a further list object allow direct custom input for initial sojourn dist parameters., e.g. list(lambda=c(10, 50, 1000))
 		soj<-sojournAnno(xAnno, soj.type=soj.type)
 		J<-soj$J
 		cat('Estimated state number from xAnno: J = ', J, '\n', sep='')	
@@ -144,12 +140,22 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	res<-GRanges()
 	seqlevels(res)<-seqlevels(xRange)
 	
+	### to return more
+	emis.par <- matrix(list(), length(seqs), nc)
+	rownames(emis.par)<-seqs
+	colnames(emis.par)<-xid
+	soj.par <- matrix(list(), length(seqs), nc)
+	rownames(soj.par)<-seqs
+	colnames(soj.par)<-xid
+	state.p <- matrix(NA, nrow=nr, ncol=nc)
+	
+	
 	# we have more than one seq to batch
 	for(s in seq_along(seqs)){
 		r<-as.character(seqnames(xRange)) == seqs[s]
 		# prep soj for the c loop, since there are multiple seq, which also means there must be xpos and maxbp
 		if(is.null(soj$d)){
-			# either has soj paramter, or has pos and maxbp for unif
+			# either has soj parameter, or has pos and maxbp for unif
 			ssoj<-append(soj, initDposV(xPos[r], maxbp))
 			if(is.null(ssoj$fttypes)){
 				# dont't have soj param
@@ -170,21 +176,29 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 					runout<-hsmmRun(x[r,c], xid[c], xRange[r], ssoj, emis.type, q.alpha, r.var, cMethod, maxit, maxgap,  tol, avg.m=avg.m, prior.m=prior.m, trim=trim, na.rm=na.rm) 	
 					res<-c(res, runout$res)
 					state[r, c]<-runout$yhat
+					state.p[r, c]<- runout$yp
+					emis.par[s,c]<- list(runout$emispar)
+					soj.par[s,c]<- list(runout$sojpar)
+			
 				}
 			} else {
 				runout<-hsmmRun(x[r,gi], xid[gi], xRange[r], ssoj, emis.type, q.alpha, r.var, cMethod, maxit, maxgap, tol, avg.m=avg.m, prior.m=prior.m, trim=trim, na.rm=na.rm)	
 				res<-c(res, runout$res)
 				state[r, gi]<-runout$yhat
+				state.p[r, gi]<- runout$yp
+				emis.par[s,gi]<- list(runout$emispar)
+				soj.par[s,gi]<- list(runout$sojpar)
 			}
 		} # end for g
 	}	# end for s
 	
 	# setup input data and state to xRange for returning
 	colnames(state)<-paste('state.',xid, sep='')
-	values(xRange)<-DataFrame(x, state, row.names = NULL)
+	colnames(state.p)<-paste('state.p.',xid, sep='')
+	values(xRange)<-DataFrame(x, state, state.p, row.names = NULL)
 	new("biomvRCNS",  
 		x = xRange, res = res,
-		param=list(J=J, maxk=maxk, maxbp=maxbp, maxgap=maxgap, soj.type=soj.type, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var, iterative=iterative, cMethod=cMethod, maxit=maxit, tol=tol, grp=grp, cluster.m=cluster.m, avg.m=avg.m, prior.m=prior.m, trim=trim, na.rm=na.rm)
+		param=list(J=J, maxk=maxk, maxbp=maxbp, maxgap=maxgap, soj.type=soj.type, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var, iterative=iterative, cMethod=cMethod, maxit=maxit, tol=tol, grp=grp, cluster.m=cluster.m, avg.m=avg.m, prior.m=prior.m, trim=trim, na.rm=na.rm, soj.par=soj.par, emis.par=emis.par)
 	)
 }
 
@@ -198,9 +212,9 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 	J<-soj$J
 	maxk<-soj$maxk
 	
-	# create default uniform initial probablity
+	# create default uniform initial probability
 	init<-rep(1/J, J) # start with uniform
-	# create default uniform transition probablity
+	# create default uniform transition probability
 	trans <- matrix(1/(J-1), nrow = J, ncol=J)
 	diag(trans)<-0
 	
@@ -266,7 +280,7 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 		if(all(is.nan(B$L))) {
 		  stop("Sojourn distribution does not work well, NaN in B$L ")
 		}
-		#update emision according to the new estimated distribution paramenters using B$L
+		#update emission according to the new estimated distribution parameters using B$L
 		emis<-initEmis(emis=emis, x=x, B=B)
 		# update sojourn dD, using B$eta
 		soj<-initSojDd(soj=soj, B=B)
@@ -297,9 +311,11 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
           maxk=as.integer(maxk), DL=as.integer(nrow(soj$d)), T=as.integer(nr), J=as.integer(J), 
           alpha = double(nr*J), shat=integer(nr), si=double(nr*J), opt=integer(nr*J), ops=integer(nr*J), PACKAGE='biomvRCNS')
         yhat<-V$shat+1
+        yp<-V$alpha[(yhat-1)*nr+1:nr]      
 	} else if (cMethod=='F-B'){
 		## assign states and split if necessary.
 		yhat<-apply(matrix(B$L,ncol=J),1,which.max)
+		yp<-B$L[(yhat-1)*nr+1:nr]      
 	}
 	if(!is.null(soj$fttypes)){
 		yhat<-soj$fttypes[yhat]
@@ -319,8 +335,15 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 						)
 					)
 			)
-	seqlevels(res)<-seqlevels(xRange)		
-	return(list(yhat=yhat, res=res))
+	seqlevels(res)<-seqlevels(xRange)
+	
+	# return the soj. and emis par, maybe also the estimated state emis$p
+	emispar2ret<-c('mu', 'var', 'size', 'df')
+	ei<-names(emis) %in% emispar2ret
+	sojpar2ret<-c('lambda', 'shift', 'mu', 'size', 'scale', 'shape')
+	si<-names(soj) %in% sojpar2ret
+			
+	return(list(yhat=yhat, res=res, yp=yp, emispar=emis[ei], sojpar=soj[si]))
 }
 
 
@@ -364,7 +387,7 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 		J<-3
 		fttypes<-c('intergenic', 'intron', 'exon')
 		#3 feature type, exon, intron, intergenic
-		transc <- transcripts(xAnno) # this give you all cds ranges ungroupped
+		transc <- transcripts(xAnno) # this give you all cds ranges ungrouped
 		intergenic<-gaps(transc)
 		
 		# gaps() will by default produce extra * ranges and full range for empty chr
@@ -384,7 +407,7 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 		ftdist<-lapply(1:J, function(j) width(xAnno[fts==fttypes[j]]))
 	} else if (class(xAnno)=='GRangesList'){
 		ng<-length(xAnno)
-		## the assumptions are number of ft types could be different from differnet list entry, group wise analysis, which of coz could be wraped using foreach(ng) single group approach
+		## the assumptions are number of ft types could be different from different list entry, group wise analysis, which of coz could be wrapped using foreach(ng) single group approach
 		fts<-lapply(1:ng, function(g) values(xAnno[[g]])[,1])
 		fttypesL<- lapply(fts, function(x) unique(x[order(x)]))
 		J<-length(unique(unlist(fts)))
@@ -402,7 +425,7 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 			gamma = all( paramID %in% c('scale', 'shape')),
 			stop("Invalid argument value for 'soj.type'! ")
 		)
-		#check length of vectos match
+		#check length of vectors match
 		J<-unique(sapply(xAnno, length))
 		if(length(J)!=1) {
 			stop("Length of vectors in xAnno are not equal, can't get valid state number J!")
@@ -493,7 +516,7 @@ initSojDd <- function(soj, B=NULL) {
 	nb <- length(dposV)/maxk
 	if(soj$type == "gamma") {
 		if(!is.null(B)){
-			# then this is a update run
+			# then this is an update run
 			soj$d <- matrix(B$eta+.Machine$double.eps,ncol=J)
 			soj$shape <- soj$scale <- numeric(J)
 			for(j in 1:J) {           
@@ -508,7 +531,7 @@ initSojDd <- function(soj, B=NULL) {
 		} # else assume soj$d exist.
 	} else if (soj$type == "pois") {
 		if(!is.null(B)){
-			# then this is a update run, reestimation of dist params
+			# then this is an update run, re-estimation of dist params
 			soj$d <- matrix(B$eta+.Machine$double.eps,ncol=J)
 			soj$shift <- soj$lambda <- numeric(J)
 			
@@ -607,9 +630,6 @@ estEmisVar<-function(x, J=3, na.rm=TRUE, r.var=0.75){
 			# multiple
 			if(na.rm) na.rm<-'complete.obs'
 			ret<-lapply(1:J, function(j) cov(x, use=na.rm)*f.var[j])
-			### alternative to use clustering
-			###ccll<-clara(x)
-			###ret<-sapply(1:J, function(j) cov(x[ccll$clustering==j,], use=na.rm))
 		}
 	} else {
 		ret<-var(as.numeric(x), na.rm=na.rm)

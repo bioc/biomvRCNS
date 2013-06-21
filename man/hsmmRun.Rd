@@ -67,6 +67,7 @@ hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.
 \value{
 	a list object, 
     \item{\code{yhat}}{the most likely state sequence, same length as \code{x} rows number}
+    \item{\code{yp}}{the associated state probability, same length as \code{x} rows number}
     \item{\code{res}}{Object of class \code{"GRanges"} , each range represent one continuous segment identified, with sample name slot 'SAMPLE', estimated state slot 'STATE' and segment mean slot 'MEAN' stored in the meta columns}
 }
 

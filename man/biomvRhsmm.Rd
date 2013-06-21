@@ -91,9 +91,9 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
 \value{
 	A \code{\link{biomvRCNS-class}} object:
     \item{\code{x}:}{Object of class \code{"GRanges"}, with range information either from real positional data or just indices, with input data matrix stored in the meta columns.
-    		 Additional meta columns for the estimated states for each sample will also be appended following the input data matrix.} 
+    		 Additional meta columns for the estimated states and associated probabilities for each sample will also be appended following the input data matrix.} 
     \item{\code{res}:}{Object of class \code{"GRanges"} , each range represent one continuous segment identified, with sample name slot 'SAMPLE', estimated state slot 'STATE' and segment mean slot 'MEAN' stored in the meta columns  }
-    \item{\code{param}:}{Object of class \code{"list"}, list of all parameters used in the model run. }
+    \item{\code{param}:}{Object of class \code{"list"}, list of all parameters used in the model run, plus the re-estimated emission and sojourn parameters. }
 }
 
 \author{
@@ -111,8 +111,16 @@ Yang Du
 	data(coriell)
 	xgr<-GRanges(seqnames=paste('chr', coriell[,2], sep=''), IRanges(start=coriell[,3], width=1, names=coriell[,1]))
 	values(xgr)<-DataFrame(coriell[,4:5], row.names=NULL)
-	xgr<-xgr[order(xgr)]
+	xgr<-sort(xgr)
 	reshsmm<-biomvRhsmm(x=xgr, maxbp=4E4, J=3, soj.type='gamma', emis.type='norm', grp=c(1,2))
+	
+	## access model parameters
+	reshsmm@param$soj.par
+	reshsmm@param$emis.par
+	
+	## states assigned and associated probabilities
+	mcols(reshsmm@x)[,-(1:2)]
+
 }
 
 \keyword{ hsmm }

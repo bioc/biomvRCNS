@@ -84,7 +84,7 @@ head(coriell, n=3)
 xgr<-GRanges(seqnames=paste('chr', coriell[,2], sep=''), 
 	IRanges(start=coriell[,3], width=1, names=coriell[,1]))
 values(xgr)<-DataFrame(coriell[,4:5], row.names=NULL)
-xgr<-xgr[order(xgr)]
+xgr<-sort(xgr)
 head(xgr, n=3)
 @ 
 
@@ -127,17 +127,20 @@ the neighbouring position will tend to have the same state, and transit to other
 In this way the sojourn distribution fully incorporate the positional information into the probabilistic framework.
 Argument \Rfunarg{emis.type} controls the distribution of emission probability, 
 in this case the log2 ratio of aCGH data is considered to follow Normal distribution. 
+The prior of the emission parameters could be controlled by supplying \Rfunarg{q.alpha} and \Rfunarg{r.var} with \Rfunarg{prior.m='quantile'}, 
+or automatically determined through a clustering process with \Rfunarg{prior.m='cluster'}.
 The function will then call C codes and estimate the most likely state sequence, with either \Rfunarg{cMethod='F-B'} or \Rfunarg{cMethod='Viterbi'}. 
 The \Rfunarg{F-B} method (default) uses a forward-backward algorithm described in \citet{Guedon2003}, 
-which gives a smooth state sequences, whereas the Viterbi algorithm with \Rfunarg{cMethod='Viterbi'} 
-will use the states profile estimated by the forward-backward algorithm and rebuild the most likely state sequence.
+which gives a smooth state sequence, whereas the Viterbi algorithm with \Rfunarg{cMethod='Viterbi'} 
+will use the state profile estimated by the forward-backward algorithm and rebuild the most likely state sequence.
 The function returns an object of class \Rclass{biomvRCNS}, in which the \Robject{res} slot 
-is a \Rclass{GRanges} object contain the summary of each estimated segments. There are three meta columns: 
+is a \Rclass{GRanges} object containing the summary of each estimated segments. There are three meta columns: 
 column \Robject{SAMPLE} gives the column name of which sample this segment belongs to; 
-column \Robject{STATE}, the estimated state for each segments, the lower state number represents 
+column \Robject{STATE}, the estimated state for each segment, the lower state number represents 
 state with lower mean value, thus in this example, a state of $1$ could represent region of deletion 
 and $3$ for region of duplication, whereas state $2$ could be considered copy neutral; 
-column \Robject{AVG}, gives the segment average value.
+column \Robject{AVG}, gives the segment average value, which could take the form of (trimmed) mean or median controlled by \Rfunarg{avg.m}. 
+The original input is also kept and returned in slot \Robject{x} with the estimated most likely state assignment and associated probability.
 
 
 A \Rfunction{plot} method has been implemented for \Rclass{biomvRCNS} object using package \Rpackage{Gviz}, 
@@ -146,7 +149,7 @@ Here we set \Rfunarg{tofile=FALSE} to output graphics to the current device, and
 
 
 \begin{center}
-<<coriellHsmmplot, fig=TRUE, echo=FALSE>>=
+<<coriellHsmmplot, fig=TRUE, echo=TRUE>>=
 biomvRGviz(exprgr=xgr[seqnames(xgr)=='chr1', 'Coriell.13330'], 
 	seggr=rhsmm@res[mcols(rhsmm@res)[,'SAMPLE']=='Coriell.13330'], 
 	regionID='region',  tofile=FALSE)
@@ -161,7 +164,7 @@ biomvRGviz(exprgr=xgr[seqnames(xgr)=='chr1', 'Coriell.13330'],
 
 In this section, we use the other two batch functions to process the \Robject{coriell} data. 
 First we use \Rfunction{biomvRseg}, in which a similar segmentation method like in the 
-package \Rpackage{tillingArray} \citep{Hubertiling} is implemented and extended to handle Poison and Negative binomial distributed data. 
+package \Rpackage{tillingArray} \citep{Hubertiling} is implemented and extended to handle Poisson and Negative binomial distributed data. 
 The function shares several argument with \Rfunction{biomvRhsmm}, like \Rfunarg{maxbp} and \Rfunarg{grp}. 
 The \Rfunarg{maxseg} gives the maximum number of segment per chromosome region, 
 while the optimal number of segment per chromosome region is determined internally by 
@@ -186,7 +189,7 @@ head(rseg@res)
 After the example run, the function returns a \Rclass{biomvRCNS} object, 
 containing similar information as the previous \Rfunction{biomvRhsmm} run, 
 except that the \Rfunarg{STATE} column now only have a binary state value of either "HIGH" or "LOW", 
-which is simply graded as 'HIGH' if the segment mean is higher than the grand mean of the whole region, and 'LOW' otherwise.
+which is simply graded as 'HIGH' if the segment average is higher than the grand average of the whole region, and 'LOW' otherwise.
 
 
 It is also possible to use the simple max-gap-min-run algorithm to segment aCGH profiles, 
@@ -202,7 +205,7 @@ res<-c(rmgmrh@res, rmgmrl@res)
 
 
 %
-\section{Example of RNA-seq data from ENCODE}
+\section{Example of transcript detection with RNA-seq data from ENCODE}
 %
 
 
@@ -251,10 +254,6 @@ gmgr<-GRanges("chr17", IRanges(start=gtfsub[idx, 4], end=gtfsub[idx, 5],
 @
 
 
-%
-\subsection{Transcript detection with Hidden-semi Markov model}
-%
-
 
 We first load the \Robject{encodeTP53} data, poll the read counts for each cell type and add 1 to the base count to increase stability. 
 
@@ -273,9 +272,12 @@ For count data from sequencing, the \Rfunarg{emis.type} could be set to either \
 though \Robject{'pois'} is preferred for sharp boundary detection. For the sojourn settings, instead of using the uninformative flat prior, 
 we here use estimates from other data source as a prior. We load the \Rpackage{TxDb.Hsapiens.UCSC.hg19.knownGene} known gene database, 
 and pass the \Rclass{TranscriptDb} object to \Rfunarg{xAnno}.  Then internally sojourn parameters and state number \Rfunarg{J} 
-will be estimated from \Rfunarg{xAnno} by calling function \Rfunction{sojournAnno}. 
-When given a  \Rclass{TranscriptDb} object to \Rfunarg{xAnno}, state number would be set to 3 and each represents 'intergenic', 'intron', 'exon'. 
+will be estimated from \Rfunarg{xAnno} by calling function \Rfunction{sojournAnno}. When given a  \Rclass{TranscriptDb} object to \Rfunarg{xAnno}, 
+state number would be set to 3 and each represents 'intergenic', 'intron' and 'exon'. 
 One can also supply a named \Rclass{list} object with initial values for parameters of distribution specified by \Rfunarg{soj.type}.
+For emission, since the highly dispersed nature of count data,
+we set the prior for emission mean to be more extreme, with \Rfunarg{q.alpha=0.01}.
+
 
 <<ENCODEHsmmTxDbSojourn, results=hide>>=
 library(TxDb.Hsapiens.UCSC.hg19.knownGene)
@@ -329,15 +331,15 @@ rmgmr<-biomvRmgmr(x=cgr, q=0.99, maxgap=50, minrun=100)
 @
 
 
-\section{Example of detection of differentially methylated region (DMR)}
+\section{Example of differentially methylated region (DMR) detection}
 
 As an example, we include a toy dataset extracted from \Rpackage{BiSeq} \citep{biseq},
 which is a small subset of a published study \citep{variodata}, 
-comprising intermediate differential methylation results prior to DMRs detection.
+comprising intermediate differential methylation results prior to DMR detection.
 We first load the \Robject{variosm} data, the data contains a \Rclass{GRanges} object \Robject{variosm} 
-with two meta columns: '\Robject{meth.diff}', smoothed methylation difference between the two sample groups;
+with two meta columns: '\Robject{meth.diff}', methylation difference between the two sample groups;
 \Robject{'p.val'}, significance level from the Wald test. 
-What we show here latter could be applied on other pipeline as well, using similar data input.
+What we will show here latter could be applied on other pipelines as well, using similar data input.
 
 <<variodata>>=
 data(variosm)
@@ -345,19 +347,22 @@ head(variosm, n=3)
 @
 
 In the \Rpackage{BiSeq} work-flow, they use an approach similar to the max-gap-min-run algorithm 
-to define the DMRs boundaries, by prior filtering and comparing the differential test statistics with a 
-user specified significance level. We now use the \Rfunction{biomvRhsmm} model to detect DMRs, 
+to define the DMR boundaries, by prior filtering and comparing the differential test statistics with a 
+user specified significance level in the candidate regions. The positional information of methylation sites
+is taking into account by locating and testing highly correlated cluster regions in the filtering process.
+
+We now use the \Rfunction{biomvRhsmm} model to detect DMR, 
 since there are mainly two types of measurement associated with differential methylation studies like we have here, 
 one is the difference in the methylation ratio and the other one is the significance level from differential test.
 The methylation difference gives information about the directionality of the change as well as the size, 
 and the significance level gives the confidence in claiming differential events. 
 
 
-So here we utilize both information for the DMRs detection. We implicitly ask the model to give 3 states, 
+So here we utilize both information for the DMR detection. We implicitly ask the model to give 3 states, 
 since \Rfunarg{J} is default to 3, in which case the three states may each represent hypomethylated regions, 
 undefined null regions, and hypermethylated regions respectively when modelling \Robject{meth.diff};
 While modelling significance level these states would represent highly confident regions, lowly confident regions or / and  null results.
-For both scenarios, we are more interested in extreme states where we have large absolute differences and low P-values, 
+For both scenarios, we are more interested in extreme states where we have consistent differences and low P-values, 
 thus we set the parameter \Rfunarg{r.var}=0.05 to be more extreme allowing small variation in those states, to keep the confidence high.
 
 <<varioHsmmrun, results=hide>>=
@@ -383,6 +388,13 @@ the regions detected in the \Rpackage{BiSeq} vignette, the two sets of regions a
 However it is worth mentioning that due to the filtering applied in their work-flow, they built wider regions out of a smaller set of
 more significant sites; while in our case, the regions are more refined and especially we identified two hypomethylated regions.
 
+\begin{center}
+<<plotdmr, fig=TRUE>>=
+s<-mcols(rhsmm@res)[,'SAMPLE']=='meth.diff' & seqnames(rhsmm@res) == 'chr1'
+e<-seqnames(variosm) == 'chr1'
+biomvRGviz(exprgr=variosm[e,'meth.diff'],  seggr=rhsmm@res[s], regionID='DMR', tofile=FALSE)
+@ 
+\end{center}
 
 \section{More}
 To be continued ...
