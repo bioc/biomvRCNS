@@ -1,7 +1,7 @@
 Package: biomvRCNS
 Type: Package
 Title: Copy Number study and Segmentation for multivariate biological data
-Version: 1.0.2
+Version: 1.0.3
 Date: 2013-06-20
 Author: Yang Du
 Maintainer: Yang Du <duyang@fbn-dummerstorf.de>

@@ -7,7 +7,7 @@
  This is the working horse of the \code{biomvRhsmm}
 }
 \usage{
-hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.var = 0.75, cMethod='F-B', maxit = 1, maxgap = Inf, tol = 1e-06, avg.m='median', prior.m='cluster', trim=0,na.rm = TRUE)
+hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.var = 0.75, cMethod='F-B', maxit = 1, maxgap = Inf, tol = 1e-06, avg.m='median', prior.m='quantile', trim=0,na.rm = TRUE)
 }
 
 \arguments{
