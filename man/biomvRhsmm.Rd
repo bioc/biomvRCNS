@@ -71,6 +71,7 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
 }
   \item{prior.m}{
 	method to select emission prior for each state, 'quantile' uses different levels of quantile; the 'cluster' method uses clara function from cluster
+}
   \item{trim}{
 	the fraction (0 to 0.5) of observations to be trimmed from each end of x before the mean is computed. Values of trim outside that range are taken as the nearest endpoint.
 }

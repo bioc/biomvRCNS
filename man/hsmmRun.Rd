@@ -50,6 +50,7 @@ hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.
 }
   \item{prior.m}{
 	method to select emission prior for each state, 'quantile' uses different levels of quantile; the 'cluster' method uses clara function from cluster
+}
   \item{trim}{
 	the fraction (0 to 0.5) of observations to be trimmed from each end of x before the mean is computed. Values of trim outside that range are taken as the nearest endpoint.
 }
