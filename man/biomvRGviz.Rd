@@ -8,7 +8,7 @@
   The plot method for class \code{\link{biomvRCNS-class}} also calls this method. See the vignette for a more complete example.
 }
 \usage{
-biomvRGviz(exprgr, gmgr = NULL, prange = NULL, regionID = "regionID", seggr = NULL, plotstrand = "+", eps = TRUE, tofile = TRUE, showId = TRUE, ...)
+biomvRGviz(exprgr, gmgr = NULL, prange = NULL, regionID = NULL, seggr = NULL, plotstrand = "+", eps = TRUE, tofile = TRUE, ...)
 }
 
 \arguments{
@@ -35,9 +35,6 @@ biomvRGviz(exprgr, gmgr = NULL, prange = NULL, regionID = "regionID", seggr = NU
 }
   \item{tofile}{
 	whether to output graphics file, if FALSE then will plot on the active device.
-}
-  \item{showId}{
-	whether names in \code{gmgr} and 'STATE' value in \code{seggr} are shown on the plot.
 }
   \item{...}{
 	other arguments for \code{plot}, like \code{main} or \code{ylab}

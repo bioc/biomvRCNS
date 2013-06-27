@@ -26,10 +26,14 @@ setMethod("show", "biomvRCNS",
 	
 ## Plot method
 setMethod("plot", "biomvRCNS",  
-	function(x, ...) {
-		for(s in unique(values(x@res)[,'SAMPLE'])){
-			for(seq in as.character(unique(seqnames(x@x)))){
-				biomvRGviz(exprgr=x@x[seqnames(x@x)==seq, s], seggr=x@res[values(x@res)[,'SAMPLE']==s],...) 
+	function(x, sampleInOne=TRUE,...) {
+		for(seq in as.character(unique(seqnames(x@x)))){
+			if(sampleInOne){
+				biomvRGviz(exprgr=x@x[seqnames(x@x)==seq, unique(mcols(x@res)[,'SAMPLE'])], seggr=x@res,...) 
+			} else {
+				for(s in unique(values(x@res)[,'SAMPLE'])){
+					biomvRGviz(exprgr=x@x[seqnames(x@x)==seq, s], seggr=x@res[values(x@res)[,'SAMPLE']==s],...) 
+				}
 			}
 		}
 	})	

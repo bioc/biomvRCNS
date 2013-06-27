@@ -231,15 +231,15 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 		xclust<-clara(x, J)
 		if(ncol(x)>1){
 			if(emis$type == 'norm' || emis$type== 'mvnorm' || emis$type == 'mvt') {
-				emis$var<-lapply(1:J, function(j) cov(x[xclust$clustering==j,]))
+				emis$var<-lapply(order(xclust$medoids), function(j) cov(x[xclust$clustering==j,]))
 			} 
-			emis$mu<-lapply(1:J, function(j) xclust$medoids[j,])
+			emis$mu<-lapply(order(xclust$medoids), function(j) xclust$medoids[j,])
 		} else {
 			if(emis$type == 'norm' || emis$type== 'mvnorm' || emis$type == 'mvt') {
-				emis$var<-sapply(1:J, function(j) var(x[xclust$clustering==j,]))
+				emis$var<-sapply(order(xclust$medoids), function(j) var(x[xclust$clustering==j,]))
 				emis$var[is.na(emis$var)]<-mean(emis$var[!is.na(emis$var)])
 			}
-			emis$mu<-as.numeric(xclust$medoids)
+			emis$mu<-as.numeric(xclust$medoids)[order(xclust$medoids)]
 		}	
 	}
 	

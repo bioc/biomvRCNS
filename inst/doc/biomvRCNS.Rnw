@@ -362,18 +362,26 @@ So here we utilize both information for the DMR detection. We implicitly ask the
 since \Rfunarg{J} is default to 3, in which case the three states may each represent hypomethylated regions, 
 undefined null regions, and hypermethylated regions respectively when modelling \Robject{meth.diff};
 While modelling significance level these states would represent highly confident regions, lowly confident regions or / and  null results.
-For both scenarios, we are more interested in extreme states where we have consistent differences and low P-values, 
-thus we set the parameter \Rfunarg{r.var}=0.05 to be more extreme allowing small variation in those states, to keep the confidence high.
+For both scenarios, we are more interested in extreme states where we have consistent differences and low P-values. 
+However the distribution of \Robject{p.val} and \Robject{meth.diff} are both highly asymmetric, 
+we thus enable the cluster mode for emission prior initialization by setting \Rfunarg{prior.m}='cluster' . 
+And due to the non-uniformly located CpG sites, one may split inter-spreading long segments with parameter \Rfunarg{maxgap}=100.
 
 <<varioHsmmrun, results=hide>>=
-rhsmm<-biomvRhsmm(x=variosm, maxbp=100, prior.m='quantile', r.var=0.05)
+rhsmm<-biomvRhsmm(x=variosm, maxbp=100, prior.m='cluster', maxgap=100)
 @ 
 
 <<finddmr>>=
 hiDiffgr<-rhsmm@res[mcols(rhsmm@res)[,'STATE']!=2 
 	& mcols(rhsmm@res)[,'SAMPLE']=='meth.diff']
+
+dirNo<-mcols(hiDiffgr)[,'STATE']=='1' & mcols(hiDiffgr)[,'AVG']>0 |
+	mcols(hiDiffgr)[,'STATE']=='3' & mcols(hiDiffgr)[,'AVG']<0	
+hiDiffgr<- hiDiffgr[!dirNo]
+
 loPgr<-rhsmm@res[mcols(rhsmm@res)[,'STATE']==1
 	& mcols(rhsmm@res)[,'SAMPLE']=='p.val']
+	
 DMRs<-intersect(hiDiffgr, loPgr)
 idx<-findOverlaps(variosm, DMRs, type='within')
 mcols(DMRs)<-DataFrame(aggregate(as.data.frame(mcols(variosm[idx@queryHits])), 
@@ -390,9 +398,9 @@ more significant sites; while in our case, the regions are more refined and espe
 
 \begin{center}
 <<plotdmr, fig=TRUE>>=
-s<-mcols(rhsmm@res)[,'SAMPLE']=='meth.diff' & seqnames(rhsmm@res) == 'chr1'
+s<-seqnames(rhsmm@res) == 'chr1'
 e<-seqnames(variosm) == 'chr1'
-biomvRGviz(exprgr=variosm[e,'meth.diff'],  seggr=rhsmm@res[s], regionID='DMR', tofile=FALSE)
+biomvRGviz(exprgr=variosm[e],  seggr=rhsmm@res[s], regionID='DMR', tofile=FALSE)
 @ 
 \end{center}
 
