@@ -1,3 +1,14 @@
+CHANGES IN VERSION 1.1.5
+-------------------------
+
+NEW FEATURES
+
+    o update biomvRGviz to have trackList returned when tofile=FALSE
+    
+BUG FIXES
+
+    o typo fix in function argument
+    
 CHANGES IN VERSION 1.1.4
 -------------------------
 

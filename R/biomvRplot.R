@@ -113,18 +113,19 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 		graphics.off()
 		if(eps){
 			setEPS()
-			postscript(paste(main, '.', plotstrand,'.eps', sep=''), paper='special', width=with, height=height, horizontal=F, fonts=c("sans"))
+			postscript(paste(main, '.', plotstrand,'.eps', sep=''), paper='special', width=width, height=height, horizontal=F, fonts=c("sans"))
 		} else {
 			pdf(paste(main, '.', plotstrand, '.pdf', sep=''), width=width, height=height)
 		}
 		# append general plotting params.
 		# min.distance = 0, min.width = 0, to distinguish adjacent feature within the same group, not sure if there will be unexpected side effects or not.
-		params <- append(params, list(fontsize=fontsize, cex.title=cex, main=main, min.distance = 0, min.width = 0, cex.legend=cex)) 
-		do.call(plotTracks,c(list(trackList), params)) 
+		params <- append(params, list(cex.axis=cex, main=main, cex.main=cex, min.distance = 0, min.width = 0, cex.legend=cex, cex=cex)) 
+		do.call(plotTracks,c(list(trackList), params))
 		dev.off()
 	} else {
 		params <- append(params, list(main=main, min.distance = 0, min.width = 0)) 
-		do.call(plotTracks,c(list(trackList), params)) 
+		do.call(plotTracks,c(list(trackList), params))
+		return(c(list(trackList), params)) 
 	}
 }
 

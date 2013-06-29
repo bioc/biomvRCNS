@@ -150,9 +150,8 @@ Here we set \Rfunarg{tofile=FALSE} to output graphics to the current device, and
 
 \begin{center}
 <<coriellHsmmplot, fig=TRUE, echo=TRUE>>=
-biomvRGviz(exprgr=xgr[seqnames(xgr)=='chr1', 'Coriell.13330'], 
-	seggr=rhsmm@res[mcols(rhsmm@res)[,'SAMPLE']=='Coriell.13330'], 
-	regionID='region',  tofile=FALSE)
+obj<-biomvRGviz(exprgr=xgr[seqnames(xgr)=='chr1', 'Coriell.13330'], 
+	seggr=rhsmm@res[mcols(rhsmm@res)[,'SAMPLE']=='Coriell.13330'], tofile=FALSE)
 @ 
 \end{center}
 
@@ -299,7 +298,7 @@ rhsmm@res[mcols(rhsmm@res)[,'STATE']=='exon']
 \begin{center}
 <<plotENCODEHsmmG, fig=TRUE>>=
 g<-mcols(rhsmm@res)[,'STATE']=='exon' & mcols(rhsmm@res)[,'SAMPLE']=='Gm12878'
-biomvRGviz(exprgr=cgr[,'Gm12878'], gmgr=gmgr, 
+obj<-biomvRGviz(exprgr=cgr[,'Gm12878'], gmgr=gmgr, 
 	seggr=rhsmm@res[g], plotstrand='-', regionID='TP53',  tofile=FALSE)
 @ 
 \end{center}
@@ -307,7 +306,7 @@ biomvRGviz(exprgr=cgr[,'Gm12878'], gmgr=gmgr,
 \begin{center}
 <<plotENCODEHsmmK, fig=TRUE>>=
 k<-mcols(rhsmm@res)[,'STATE']=='exon' & mcols(rhsmm@res)[,'SAMPLE']=='K562'
-biomvRGviz(exprgr=cgr[,'K562'], gmgr=gmgr, 
+obj<-biomvRGviz(exprgr=cgr[,'K562'], gmgr=gmgr, 
   seggr=rhsmm@res[k], plotstrand='-', regionID='TP53', tofile=FALSE)
 @ 
 \end{center}
@@ -400,7 +399,7 @@ more significant sites; while in our case, the regions are more refined and espe
 <<plotdmr, fig=TRUE>>=
 s<-seqnames(rhsmm@res) == 'chr1'
 e<-seqnames(variosm) == 'chr1'
-biomvRGviz(exprgr=variosm[e],  seggr=rhsmm@res[s], regionID='DMR', tofile=FALSE)
+obj<-biomvRGviz(exprgr=variosm[e],  seggr=rhsmm@res[s], regionID='DMR', tofile=FALSE)
 @ 
 \end{center}
 

@@ -34,10 +34,10 @@ biomvRGviz(exprgr, gmgr = NULL, prange = NULL, regionID = NULL, seggr = NULL, pl
 	whether to output EPS file using postscript, if FALSE then PDF files for each sequence will be generated to the current working folder.
 }
   \item{tofile}{
-	whether to output graphics file, if FALSE then will plot on the active device.
+	whether to output graphics file, if FALSE then will plot on the active device and have the trackList returned.
 }
   \item{...}{
-	other arguments for \code{plot}, like \code{main} or \code{ylab}
+	other arguments for \code{plot}, like \code{main}, \code{ylab}, \code{cex}, or \code{height}  and \code{width} for graphic device.
 }
 }
 \details{
