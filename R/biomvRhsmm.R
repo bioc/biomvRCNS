@@ -214,6 +214,7 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 			prior.m <- 'quantile'
 		}
 		require(cluster)
+		xclust<-clara(x, J)
 		if(ncol(x)>1){
 			if(emis$type == 'norm' || emis$type== 'mvnorm' || emis$type == 'mvt') {
 				emis$var<-lapply(order(xclust$medoids), function(j) cov(x[xclust$clustering==j,]))
