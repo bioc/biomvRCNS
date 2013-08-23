@@ -251,7 +251,7 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis.type='norm', q.alpha=0.05
 		}
 	}	
 	if (emis$type == 'nbinom'){
-		emis$size <- rep(estimateSegCommonDisp(x), J) # common prior
+		emis$size <- rep(nbinomCLLDD(x)$par[1], J) # common prior
 	}
 	if (emis$type == 't' || emis$type == 'mvt'){
 		emis$df <- rep(1, J) # common prior
