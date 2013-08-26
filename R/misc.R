@@ -5,7 +5,7 @@ simSegData<-function(nseg=10, J=3, soj, emis, seed=1234, toPlot=FALSE){
 	# focus on the soj settings,
 	# keep the difference between emission of different states small
 
-	# pool of segements for each states to sample from
+	# pool of segments for each states to sample from
 	#check J to see if it conforms with soj and emis
 	if(!is.null(soj)){
 		if(! soj$type %in% c('gamma', 'pois', 'nbinom')){
@@ -26,7 +26,7 @@ simSegData<-function(nseg=10, J=3, soj, emis, seed=1234, toPlot=FALSE){
 		}
 	}	
 
-	# generae pool of segments, with soj related length, and states related signal
+	# generate pool of segments, with soj related length, and states related signal
 	segLen<-sapply(1:J, function(j) simUvSegData(nseg, j, soj, seed))
 	segExp<-sapply(1:J, function(j) sapply(segLen[,j], function(l) simUvSegData(l, j, emis)))
 	
@@ -113,7 +113,7 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 		xid<-colnames(x)
 		x<-as.matrix(x)
 	} else {
-		cat('No dim attributes, coercing x to a matrix with 1 column.\n')
+		message('No dim attributes, coercing x to a matrix with 1 column.')
 		x <- matrix(as.numeric(x), ncol=1)
 	}
 	nr<-nrow(x) 
@@ -134,11 +134,11 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 		}
 	} else {
 		# no valid xRange, set it to null
-		cat('no valid xRange and usePos found, check if you have specified xRange / usePos.\n')
+		message('no valid xRange and usePos found, check if you have specified xRange / usePos.')
 		xRange<- NULL
 	} 
 	if (is.null(xPos) || !is.numeric(xPos) || length(xPos)!=nr){
-		cat("No valid positional information found. Re-check if you have specified any xPos / xRange.\n")
+		message("No valid positional information found. Re-check if you have specified any xPos / xRange.")
 		xPos<-NULL
 	}
  
@@ -163,12 +163,12 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 	seqlevels(res)<-seqlevels(xRange)
 	# we have more than one seq to batch
 	for(s in seq_along(seqs)){
-		cat(sprintf("Processing sequence %s\n", seqs[s]))
+		message(sprintf("Processing sequence %s\n", seqs[s]))
 		r<-which(as.character(seqnames(xRange)) == seqs[s])
 		
 		for(g in unique(grp)){
 			gi<-grp==g
-			
+			message(sprintf("Building segmentation model for group %s ...", g))
 			# fixme, worth thinking, if columns within one group should be pooled.
 			if(poolGrp){
 				Ilist<-maxGapminRun(x=apply(as.matrix(x[r, gi]), 1, median, na.rm=na.rm), xRange=ranges(xRange)[r], cutoff=cutoff, q=q, high=high, minrun=minrun, maxgap=maxgap, splitLen=splitLen, na.rm=na.rm)
@@ -200,9 +200,9 @@ biomvRmgmr<-function(x, xPos=NULL, xRange=NULL, usePos='start', cutoff=NULL, q=0
 			}
 			
 			} # end c for
-			cat(sprintf("Building segmentation model for group %s complete\n", g))
+			message(sprintf("Building segmentation model for group %s complete.", g))
 		} # end for g
-		cat(sprintf("Processing sequence %s complete\n", seqs[s]))
+		message(sprintf("Processing sequence %s complete.", seqs[s]))
 	} # end for s
 
 	values(xRange)<-DataFrame(x,  row.names = NULL)
@@ -423,11 +423,11 @@ nbinomFit <- function(x, wt=NULL, maxshift=0) {
 nbinomCLLDD<-function(x, wt=NULL, s=0){
 	if(is.null(wt)) wt <- rep(1,length(x))
 	if(length(x) != length(wt)) stop("length of x and wt differ!")
-	tmp <- cov.wt(data.frame(x-s),wt=wt)
+	tmp <- cov.wt(matrix(as.vector(x-s)),wt=wt)
 	m <- as.numeric(tmp$center)
 	v <- as.numeric(tmp$cov)
 	size <- if (v > m) m^2/(v - m) else 100
-	value<-sum(dnbinom(x = x-s, size=size, mu=m ,log=TRUE) * wt, na.rm=T)
+	value<-sum(dnbinom(x = as.vector(x-s), size=size, mu=m ,log=TRUE) * wt, na.rm=T)
 	return(list(value=value, par=c(size, m)))
 #	optim(c(size,m),function(par) sum(dnbinom(x-s,size=par[1],mu=par[2],log=TRUE)*wt, na.rm=TRUE) , lower=.Machine$double.eps, method='L-BFGS-B', control=list(fnscale=-1,maxit=1000))
 }

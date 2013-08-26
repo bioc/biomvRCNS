@@ -20,7 +20,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 		xid<-colnames(x)
 		x<-as.matrix(x)
 	} else {
-		cat('No dim attributes, coercing x to a matrix with 1 column.\n')
+		message('No dim attributes, coercing x to a matrix with 1 column.')
 		x <- matrix(as.numeric(x), ncol=1)
 	}
 	nr<-nrow(x) 
@@ -41,11 +41,11 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 		}
 	} else {
 		# no valid xRange, set it to null
-		cat('no valid xRange and usePos found, check if you have specified xRange / usePos.\n')
+		message('no valid xRange and usePos found, check if you have specified xRange / usePos.')
 		xRange<- NULL
 	} 
 	if (is.null(xPos) || !is.numeric(xPos) || length(xPos)!=nr){
-		cat("No valid positional information found. Re-check if you have specified any xPos / xRange.\n")
+		message("No valid positional information found. Re-check if you have specified any xPos / xRange.")
 		xPos<-NULL
 	}
 	if (!is.null(maxbp) && (!is.numeric(maxbp) || (length(maxbp) != 1) || (maxbp <= 1) ||  ( !is.null(xPos) && maxbp > max(xPos,na.rm=na.rm)-min(xPos, na.rm=na.rm)))) 
@@ -95,7 +95,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 	# we have more than one seq to batch
 	
 	for(s in seq_along(seqs)){
-		cat(sprintf("Processing sequence %s\n", seqs[s]))
+		message(sprintf("Processing sequence %s\n ...", seqs[s]))
 		r<-which(as.character(seqnames(xRange)) == seqs[s])
 		
 		## update local maxk, if maxbp and xPos/xRange are given / or check if maxk is too large for current seq
@@ -110,7 +110,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 		}	
 		
 		for(g in unique(grp)){
-			cat(sprintf("Step 1 building segmentation model for group %s\n", g))
+			message(sprintf("Step 1 building segmentation model for group %s ...", g))
 			gi<-grp==g
 			d<-sum(gi)
 			if(family=='nbinom'){
@@ -162,7 +162,7 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 				mBIC = which.min(sapply(seq_len(maxseg), function(x) -2*logL[x] +mbic2ndt[x]/2- log(length(r)*d)/2 + nP[x]*log(length(r)*d))),
 				HQIC = which.min(sapply(seq_len(maxseg), function(x) -2*logL[x]+2*nP[x]*log(log(length(r)*d)))),
 				stop('Invalid value argument for penalty'))	
-			cat(sprintf("Step 1 building segmentation model for group %s complete\n", g))
+			message(sprintf("Step 1 building segmentation model for group %s complete.", g))
 		
 			#rN could be supplied by the user, thus only keeping the initial segment candidate
 			for(c in which(gi)){
@@ -187,10 +187,10 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 					mcols(tores)<-DataFrame(values(tores), STATE=sapply(1:length(tores), function(i) ifelse(values(tores)[i, 'AVG']>avgFunc(x[r,c], avg.m=avg.m, trim=trim, na.rm=na.rm), 'HIGH', 'LOW')), row.names = NULL)
 					seqlevels(tores)<-seqlevels(xRange)
 					res<-c(res, tores)
-					cat(sprintf("No need to run step 2 merging, processing complete for column %s from group %s\n", c, g))
+					message(sprintf("No need to run step 2 merging, processing complete for column %s from group %s.", c, g))
 					
 				} else {
-					cat(sprintf("Step 2 merging for column %s from group %s\n", c, g))
+					message(sprintf("Step 2 merging for column %s from group %s\n", c, g))
 					# to run a 2nd step merging
 					# get all candidates coordinates
 					rRegs<-mat2list(Res$segS, maxseg)[[maxseg]]	
@@ -227,12 +227,12 @@ biomvRseg<-function(x, maxk=NULL, maxbp=NULL, maxseg=NULL, xPos=NULL, xRange=NUL
 					mcols(tores)<-DataFrame(values(tores), STATE=sapply(1:length(tores), function(i) ifelse(values(tores)[i, 'AVG']>avgFunc(x[r,c], avg.m=avg.m, trim=trim, na.rm=na.rm), 'HIGH', 'LOW')), row.names = NULL)
 					seqlevels(tores)<-seqlevels(xRange)
 					res<-c(res, tores)
-					cat(sprintf("Step 2 merging complete for column %s from group %s\n", c, g))
+					message(sprintf("Step 2 merging for column %s from group %s complete.", c, g))
 				} # end 2nd step if
 			} # end c for
-			cat(sprintf("Building segmentation model for group %s complete\n", g))
+			message(sprintf("Building segmentation model for group %s complete.", g))
 		} # end for g
-		cat(sprintf("Processing sequence %s complete\n", seqs[s]))
+		message(sprintf("Processing sequence %s complete.", seqs[s]))
 	} # end for s
 
 #	new("biomvRseg",
@@ -288,7 +288,7 @@ regionSegCost<-function(x, maxk=NULL, segs=NULL, family=NULL, alpha=NULL, useSum
     ## add a checking for useSum in norm models
     if(d==1 && !useSum){
     	useSum<-TRUE
-    	cat("For univariate normal data, 'useSum' reset to TRUE, though result should be identical.\n")
+    	message("For univariate normal data, 'useSum' reset to TRUE, though result should be identical.")
     }
     
     ## check input parameter maxk and segs

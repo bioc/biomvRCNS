@@ -63,8 +63,8 @@ Yang Du
 	# a uniform inital sojourn, not utilizing positional information
 	soj<-list(J=J, maxk=maxk, type='gamma', d=cbind(dunif(1:maxk, 1, maxk), dunif(1:maxk, 1, maxk)))
 	soj$D <- sapply(1:J, function(j) rev(cumsum(rev(soj$d[1:maxk,j]))))
-	sample<-colnames(coriell)[4]
-	runout<-hsmmRun(matrix(values(xgr)[,sample]), sample, xgr, soj, emis.type='norm')
+	sample<-colnames(coriell)[5]
+	runout<-hsmmRun(matrix(values(xgr)[,sample]), sample, xgr, soj, emis=list(type='norm', mu=quantile(unlist(x[,sample]), c(0.25, 0.75)), var=rep(var(unlist(x[,sample])), J)))
 	biomvRGviz(exprgr=xgr, seggr=runout$res, tofile=FALSE) 
 	
 }

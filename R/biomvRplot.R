@@ -113,7 +113,7 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 		graphics.off()
 		if(eps){
 			setEPS()
-			postscript(paste(main, '.', plotstrand,'.eps', sep=''), paper='special', width=width, height=height, horizontal=F, fonts=c("sans"))
+			postscript(paste(main, '.', plotstrand,'.eps', sep=''), paper='special', width=width, height=height, horizontal=F, fonts=c("sans"), colormodel="rgb")
 		} else {
 			pdf(paste(main, '.', plotstrand, '.pdf', sep=''), width=width, height=height)
 		}

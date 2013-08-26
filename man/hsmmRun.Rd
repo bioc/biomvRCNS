@@ -7,7 +7,7 @@
  This is the working horse of the \code{biomvRhsmm}
 }
 \usage{
-hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.var = 0.75, cMethod='F-B', maxit = 1, maxgap = Inf, tol = 1e-06, avg.m='median', prior.m='cluster', trim=0,na.rm = TRUE)
+hsmmRun(x, xid="sampleid", xRange, soj, emis, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, avg.m='median', trim=0, na.rm=TRUE)
 }
 
 \arguments{
@@ -23,15 +23,8 @@ hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.
   \item{soj}{
 	a list object containing the relevant sojourn distribution parameters
 }
-  \item{emis.type}{
-	type of the emission distribution, only the following types are supported: 'norm', 'mvnorm', 'pois', 'nbinom', 'mvt', 't'
-}
-  \item{q.alpha}{
-	a quantile factor controlling the estimated prior for the mean of the emission of each states, \code{seq(from=q.alpha, to=1-q.alpha, length.out=J)}
-}
-  \item{r.var}{
-	a ratio factor controlling the estimated prior for the variance / covariance structure of each states. 
-	A value larger than 1 tend to allow larger variation in extreme states;  a value smaller than 1 will decrease the probability of having extreme states
+  \item{emis}{
+	a list object containing the relevant emission distribution parameters
 }
   \item{cMethod}{
 	C algorithm used for the most likely state sequence, 'F-B' or 'Viterbi'
@@ -48,9 +41,6 @@ hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.
   \item{avg.m}{
 	method to calculate average value for each segment, 'median' or 'mean' possibly trimmed
 }
-  \item{prior.m}{
-	method to select emission prior for each state, 'quantile' uses different levels of quantile; the 'cluster' method uses clara function from cluster
-}
   \item{trim}{
 	the fraction (0 to 0.5) of observations to be trimmed from each end of x before the mean is computed. Values of trim outside that range are taken as the nearest endpoint.
 }
@@ -66,8 +56,8 @@ hsmmRun(x, xid = "sampleid", xRange, soj, emis.type = "norm", q.alpha = 0.05, r.
 }
 \value{
 	a list object, 
-    \item{\code{yhat}}{the most likely state sequence, same length as \code{x} rows number}
-    \item{\code{yp}}{the associated state probability, same length as \code{x} rows number}
+    \item{\code{yhat}}{a \code{"Rle"} object, the most likely state sequence, same length as \code{x} rows number}
+    \item{\code{yp}}{\code{"Rle"}, the associated state probability, same length as \code{x} rows number}
     \item{\code{res}}{Object of class \code{"GRanges"} , each range represent one continuous segment identified, with sample name slot 'SAMPLE', estimated state slot 'STATE' and segment mean slot 'MEAN' stored in the meta columns}
 }
 
@@ -98,7 +88,7 @@ Yang Du
 	soj$D <- sapply(1:J, function(j) rev(cumsum(rev(soj$d[1:maxk,j]))))
 	# run 1 sample only, Coriell.13330
 	sample<-colnames(coriell)[5]
-	runout<-hsmmRun(matrix(values(xgr)[,sample]), sample, xgr, soj, emis.type='norm')
+	runout<-hsmmRun(matrix(values(xgr)[,sample]), sample, xgr, soj, emis=list(type='norm', mu=range(x[,4:5]), var=rep(var(unlist(x[,4:5])), J)))
 }
 
 \keyword{ hsmm }

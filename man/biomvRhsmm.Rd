@@ -7,7 +7,7 @@
 	The batch function of building Hidden Semi Markov Model (HSMM) to estimate the most likely state sequences for multiple input data series.
 }
 \usage{
-biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', prior.m='cluster', trim=0, na.rm=TRUE)
+biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', com.emis=TRUE, xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, useMC=TRUE, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', prior.m='cluster', trim=0, na.rm=TRUE)
 }
 
 \arguments{
@@ -35,6 +35,9 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
   \item{emis.type}{
 	type of the emission distribution, only the following types are supported: 'norm', 'mvnorm', 'pois', 'nbinom', 'mvt', 't'
 }
+  \item{com.emis}{
+	whether to set a common emission prior across differnt seqnames
+}
   \item{xAnno}{
 	a optional \code{TranscriptDb} / \code{GRanges} / \code{GRangesList} / \code{list} object used in \code{\link{sojournAnno}} to infer parameters for the sojourn distribution 
 }
@@ -47,6 +50,9 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
   \item{r.var}{
 	a ratio factor controlling the estimated prior for the variance / covariance structure of each states. 
 	A value larger than 1 tend to allow larger variation in extreme states;  a value smaller than 1 will decrease the probability of having extreme state
+}
+  \item{useMC}{
+	TRUE if \code{\link{mclapply}} should be used to speed up the calculation, use \code{options(mc.cores=n)} to set number of parallel processes
 }
   \item{cMethod}{
 	C algorithm used for the most likely state sequence, 'F-B' or 'Viterbi'
@@ -91,7 +97,7 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
 \value{
 	A \code{\link{biomvRCNS-class}} object:
     \item{\code{x}:}{Object of class \code{"GRanges"}, with range information either from real positional data or just indices, with input data matrix stored in the meta columns.
-    		 Additional meta columns for the estimated states and associated probabilities for each sample will also be appended following the input data matrix.} 
+    		 Additional meta columns for the estimated states and associated probabilities for each sample or group will also be appended following the input data matrix.} 
     \item{\code{res}:}{Object of class \code{"GRanges"} , each range represent one continuous segment identified, with sample name slot 'SAMPLE', estimated state slot 'STATE' and segment mean slot 'MEAN' stored in the meta columns  }
     \item{\code{param}:}{Object of class \code{"list"}, list of all parameters used in the model run, plus the re-estimated emission and sojourn parameters. }
 }
