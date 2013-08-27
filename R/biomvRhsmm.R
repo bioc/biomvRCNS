@@ -1,12 +1,12 @@
 ##################################################
 # re-implement HSMM, one more slot to handle distance array
 ##################################################
-biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', com.emis=TRUE, xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, useMC=TRUE, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', prior.m = 'cluster', trim=0, na.rm=TRUE){
+biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', com.emis=FALSE, xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, useMC=TRUE, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', prior.m = 'cluster', trim=0, na.rm=TRUE){
 	## input checking
 	# lock.transition / lock.d, lock transition and sojourn #fixme
 	# est.method=c('viterbi', 'smooth')
 	
-	message('Checking input x')
+	message('Checking input ...')
 	if (!is.numeric(x) &&  !is.matrix(x) && class(x)!='GRanges') 
         stop("'x' must be a numeric vector or matrix or a GRanges object.")
     if(class(x)=='GRanges') {
@@ -173,7 +173,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 		}
 	}
 
-	#?todo, make it parallel
+	#make it parallel
 	if(useMC & length(find.package('parallel', quiet=T))==0) {
 		warning("'parallel' is not found, use normal 'lapply' function!!!")
 		useMC<-FALSE
@@ -181,78 +181,90 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	} else if (useMC){
 		require(parallel)
 		mylapply<-mclapply
+	} else {
+		mylapply<-lapply
 	}
 	# we have more than one seq to batch
 	mcres<-mylapply(seq_along(seqs), function(s) {
 		r<-which(as.character(seqnames(xRange)) == seqs[s])
-		# prep soj for the c loop, since there are multiple seq, which also means there must be xpos and maxbp
-		message(sprintf("Preparing sojourn prior for seq  %s ...", seqs[s]))				
-		if(is.null(soj$d)){
-			# either has soj parameter, or has pos and maxbp for unif
-			ssoj<-append(soj, initDposV(xPos[r], maxbp))
-			if(is.null(ssoj$fttypes)){
-				# dont't have soj param
-				ssoj<-append(ssoj, list(d=unifMJ(ssoj$maxk*length(r), J)))
+		runout<-list()
+		
+		if(length(r)<2){
+			if(iterative){
+				runout<- lapply(seq_len(nc), function(c) list(list(NA)))
+			} else {
+				runout<- lapply(unique(grp), function(g) list(list(NA)))
 			}
 		} else {
-			# maxk and unif d, no maxbp or xAnno
-			ssoj<-soj
-		}	
-		ssoj <- initSojDd(ssoj)
-		
-		runout<-list()
-		for(g in unique(grp)){
-			gi<-grp==g
-			if(iterative){
-				for(ci in which(gi)){
-					message(sprintf("Building HSMM for seq %s in column %s ...", seqs[s], ci))				
-					if(com.emis) {
-						semis<-emis[[ci]]
-					}else {
-						if(spRle){
-							semis<-estEmis(x[,ci][[1]][r], J=J, prior.m=prior.m, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var)
-						} else {
-							semis<-estEmis(x[r,ci], J=J, prior.m=prior.m, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var)
-						}
-					}
-					if(spRle){
-						grunout<-tryCatch(hsmmRun(x[,ci][[1]][r], xid[ci], xRange[r], ssoj, semis, cMethod, maxit, maxgap,  tol, avg.m=avg.m, trim=trim, na.rm=na.rm), error=function(e){ return(e) })
-					} else {
-						grunout<-tryCatch(hsmmRun(x[r,ci], xid[ci], xRange[r], ssoj, semis, cMethod, maxit, maxgap,  tol, avg.m=avg.m, trim=trim, na.rm=na.rm), error=function(e){ return(e) }) 	
-					}
-					if(length(grep('error', class(grunout), ignore.case=T))!=0){
-						warning('Model failed for seq ', s, ' and column ', c, '.\n', grunout)
-						runout<-append(runout, list(NA))				
-					} else {
-						runout<-append(runout, list(grunout)	)
-					}	
+			# prep soj for the c loop, since there are multiple seq, which also means there must be xpos and maxbp
+			message(sprintf("Preparing sojourn prior for seq  '%s' ...", seqs[s]))				
+			if(is.null(soj$d)){
+				# either has soj parameter, or has pos and maxbp for unif
+				ssoj<-append(soj, initDposV(xPos[r], maxbp))
+				if(is.null(ssoj$fttypes)){
+					# dont't have soj param
+					ssoj<-append(ssoj, list(d=unifMJ(ssoj$maxk*length(r), J)))
 				}
 			} else {
-				message(sprintf("Building HSMM for group %s ...", g))
-				if(com.emis) {
-					semis<-emis[[g]]
-				}else {
-					if(spRle){
-						stop('Rle like structure is not currently supported for mvnorm / mvt!')
+				# maxk and unif d, no maxbp or xAnno
+				ssoj<-soj
+			}	
+			ssoj <- initSojDd(ssoj)
+	
+			for(g in unique(grp)){
+				gi<-grp==g
+				if(iterative){
+					for(ci in which(gi)){
+						message(sprintf("Building HSMM for seq '%s' in column '%s' ...", seqs[s], ci))				
+						if(com.emis) {
+							semis<-emis[[ci]]
+						}else {
+							if(spRle){
+								semis<-estEmis(x[,ci][[1]][r], J=J, prior.m=prior.m, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var)
+							} else {
+								semis<-estEmis(x[r,ci], J=J, prior.m=prior.m, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var)
+							}
+						}
+						if(spRle){
+							grunout<-tryCatch(hsmmRun(x[,ci][[1]][r], xid[ci], xRange[r], ssoj, semis, cMethod, maxit, maxgap,  tol, avg.m=avg.m, trim=trim, na.rm=na.rm), error=function(e){ return(e) })
+						} else {
+							grunout<-tryCatch(hsmmRun(x[r,ci], xid[ci], xRange[r], ssoj, semis, cMethod, maxit, maxgap,  tol, avg.m=avg.m, trim=trim, na.rm=na.rm), error=function(e){ return(e) }) 	
+						}
+						if(length(grep('error', class(grunout), ignore.case=T))!=0){
+							warning('Model failed for seq ', s, ' and column ', c, '.\n', grunout)
+							runout<-append(runout, list(list(NA)))
+						} else {
+							runout<-append(runout, list(grunout)	)
+						}	
+					}
+				} else {
+					message(sprintf("Building HSMM for group '%s' ...", g))
+					if(com.emis) {
+						semis<-emis[[g]]
+					}else {
+						if(spRle){
+							stop('Rle like structure is not currently supported for mvnorm / mvt!')
+						} else {
+							semis<-estEmis(x[r,gi], J=J, prior.m=prior.m, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var)
+						}
+					}
+					grunout<-tryCatch(hsmmRun(x[r,gi], xid[gi], xRange[r], ssoj, semis, cMethod, maxit, maxgap, tol, avg.m=avg.m, trim=trim, na.rm=na.rm)	, error=function(e){ return(e) })
+					if(length(grep('error', class(grunout), ignore.case=T))!=0){
+						warning('Model failed for seq ', s, ' and group ', g, '.\n', grunout)
+						runout<-append(runout, list(list(NA)))				
 					} else {
-						semis<-estEmis(x[r,gi], J=J, prior.m=prior.m, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var)
+						runout<-append(runout, list(grunout))
 					}
 				}
-				grunout<-tryCatch(hsmmRun(x[r,gi], xid[gi], xRange[r], ssoj, semis, cMethod, maxit, maxgap, tol, avg.m=avg.m, trim=trim, na.rm=na.rm)	, error=function(e){ return(e) })
-				if(length(grep('error', class(grunout), ignore.case=T))!=0){
-					warning('Model failed for seq ', s, ' and group ', g, '.\n', grunout)
-					runout<-append(runout, list(NA))				
-				} else {
-					runout<-append(runout, list(grunout))
-				}
-			}
-		} # end for g
+			} # end for g
+		} # end if 
 		return(runout)
 	})
 	
+	message("Building HSMM complete, preparing output ...")
 	res<-do.call(c, lapply(seq_along(seqs), function(s){
 		do.call(c, lapply(seq_len(ifelse(iterative, nc, length(unique(grp)))), function(g){
-			 if(!is.na(mcres[[s]][[g]])){
+			 if(!is.na(mcres[[s]][[g]][1])){
 			 	return(mcres[[s]][[g]]$res)
 			 } else {
 			 	return(GRanges())
@@ -263,7 +275,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	seqr<-table(seqnames(xRange))
 	ssp<-do.call(rbind, lapply(seq_along(seqs), function(s){
 		do.call(cbind, lapply(seq_len(ifelse(iterative, nc, length(unique(grp)))), function(g){
-			 if(!is.na(mcres[[s]][[g]])){
+			 if(!is.na(mcres[[s]][[g]][1])){
 			 	return(DataFrame(s=mcres[[s]][[g]]$yhat, sp=mcres[[s]][[g]]$yp))
 			 } else {
 			 	return(DataFrame(s=Rle(NA, seqr[seqs[s]]), sp=Rle(NA, seqr[seqs[s]])))
@@ -273,10 +285,10 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	
 	emis.par<-do.call(rbind, lapply(seq_along(seqs), function(s){
 		do.call(c, lapply(seq_len(ifelse(iterative, nc, length(unique(grp)))), function(g){
-			 if(!is.na(mcres[[s]][[g]])){
+			 if(!is.na(mcres[[s]][[g]][1])){
 			 	return(list(mcres[[s]][[g]]$emispar))
 			 } else {
-			 	return(list())
+			 	return(list(NA))
 			 }
 		}))
 	}))
@@ -285,10 +297,10 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	
 	soj.par<-do.call(rbind, lapply(seq_along(seqs), function(s){
 		do.call(c, lapply(seq_len(ifelse(iterative, nc, length(unique(grp)))), function(g){
-			 if(!is.na(mcres[[s]][[g]])){
+			 if(!is.na(mcres[[s]][[g]][1])){
 			 	return(list(mcres[[s]][[g]]$sojpar))
 			 } else {
-			 	return(list())
+			 	return(list(NA))
 			 }
 		}))
 	}))
@@ -296,7 +308,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	colnames(soj.par)<-if(iterative) xid else unique(grp)
 
 	# setup input data and state to xRange for returning
-	values(xRange)<-DataFrame(x, ssp, row.names = NULL)
+	values(xRange)<-DataFrame(do.call(DataFrame, lapply(seq_len(nc), function(c) x[,c])), ssp, row.names = NULL)
 	colnames(mcols(xRange)) <- c(xid, paste(rep(c('S', 'SP'), ifelse(iterative, nc, length(unique(grp)))), rep(if(iterative) xid else unique(grp), each=2), sep='.'))
 	new("biomvRCNS",  
 		x = xRange, res = res,
@@ -313,7 +325,8 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis, cMethod='F-B', maxit=1, 
 	nr<-nrow(x)
 	J<-soj$J
 	maxk<-soj$maxk
-	
+	s<-unique(as.character(seqnames(xRange))) 
+		
 	# create default uniform initial probability
 	init<-rep(1/J, J) # start with uniform
 	# create default uniform transition probability
@@ -325,7 +338,7 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis, cMethod='F-B', maxit=1, 
 	ll <- rep(NA,maxit)
 	# start MM iteration
 	for(it in 1:maxit) {
-		message('iteration: ', it)
+		message(sprintf("[ hsmmRun ] seq '%s' column '%s' iteration: %d", s, paste(xid, collapse='+'), it))
 		# reestimationg of emmision   
 		emis<-initEmis(emis=emis, x=x)
 		B  = .C("backward", a=as.double(trans), pi=as.double(init), b=as.double(emis$p), d=as.double(soj$d), D=as.double(soj$D),
@@ -392,9 +405,9 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis, cMethod='F-B', maxit=1, 
 						GRanges(seqnames=as.character(seqnames(xRange)[1]), 
 							IRanges(start=rep(start(xRange)[Ilist[[j]][,'IS']], length(xid)), end=rep(end(xRange)[Ilist[[j]][,'IE']], length(xid))), 
 							strand=rep(strand(xRange)[Ilist[[j]][,'IS']], length(xid)), 
-							SAMPLE=rep(xid, each=nrow(Ilist[[j]])), 
-							STATE=rep(as.character(j), nrow(Ilist[[j]])*length(xid)), 
-							AVG=as.numeric(sapply(xid, function(s) apply(Ilist[[j]], 1, function(r) apply(as.matrix(x[r[1]:r[2],s]), 2, avgFunc, avg.m=avg.m, trim=trim, na.rm=na.rm))))
+							SAMPLE=Rle(xid, rep(nrow(Ilist[[j]]), length(xid))), 
+							STATE=Rle(as.character(j), nrow(Ilist[[j]])*length(xid)), 
+							AVG=Rle(as.numeric(sapply(xid, function(s) apply(Ilist[[j]], 1, function(r) apply(as.matrix(x[r[1]:r[2],s]), 2, avgFunc, avg.m=avg.m, trim=trim, na.rm=na.rm)))))
 						)
 					)
 			)
@@ -659,9 +672,9 @@ estEmis<-function(x, J=3, prior.m='quantile', emis.type='norm', q.alpha=0.05, r.
 		xclust<-clara(x, J)
 		if(ncol(x)>1){
 			if(emis$type == 'norm' || emis$type== 'mvnorm' || emis$type == 'mvt') {
-				emis$var<-lapply(order(xclust$medoids), function(j) cov(x[xclust$clustering==j,]))
+				emis$var<-lapply(order(xclust$medoids[,1]), function(j) cov(x[xclust$clustering==j,]))
 			} 
-			emis$mu<-lapply(order(xclust$medoids), function(j) xclust$medoids[j,])
+			emis$mu<-lapply(order(xclust$medoids[,1]), function(j) xclust$medoids[j,])
 		} else {
 			if(emis$type == 'norm' || emis$type== 'mvnorm' || emis$type == 'mvt') {
 				emis$var<-sapply(order(xclust$medoids), function(j) var(x[xclust$clustering==j,]))

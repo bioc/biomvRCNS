@@ -112,7 +112,7 @@ By default, all data columns are assumed to be from the same group.
 
 <<coriellHsmm, results=hide>>=
 rhsmm<-biomvRhsmm(x=xgr, maxbp=4E4, J=3, soj.type='gamma', 
-	emis.type='norm', prior.m='quantile', grp=c(1,2))
+	com.emis=F, emis.type='norm', prior.m='quantile', grp=c(1,2))
 @ 
 <<coriellHsmmres>>=
 show(rhsmm)
@@ -127,6 +127,8 @@ the neighbouring position will tend to have the same state, and transit to other
 In this way the sojourn distribution fully incorporate the positional information into the probabilistic framework.
 Argument \Rfunarg{emis.type} controls the distribution of emission probability, 
 in this case the log2 ratio of aCGH data is considered to follow Normal distribution. 
+The emission density could be estimated using all data or only data on the repective region or chromosome 
+(identified by unique \Rfunction{seqnames}), controlling via \Rfunarg{com.emis}. 
 The prior of the emission parameters could be controlled by supplying \Rfunarg{q.alpha} and \Rfunarg{r.var} with \Rfunarg{prior.m='quantile'}, 
 or automatically determined through a clustering process with \Rfunarg{prior.m='cluster'}.
 The function will then call C codes and estimate the most likely state sequence, with either \Rfunarg{cMethod='F-B'} or \Rfunarg{cMethod='Viterbi'}. 
@@ -220,7 +222,6 @@ To generate local read counts, alignment files were pulled from UCSC
 And subsequently reads were counted in each non-overlapping unit sized window for the region (chr17:7,560,001-7,610,000). 
 In the pre-compiled data \Robject{encodeTP53} , a window size of 25bp was used with the chunk of code below.
 
-
 <<buildENCODEcgr, eval=FALSE>>=
 winsize<-25
 cgr<-GRanges("chr17", strand='-', 
@@ -238,6 +239,24 @@ for(i in seq_len(nrow(bamfiles))){
 }
 @
 
+Alternatively one can also operate on base pair resolution, in which case a \Rclass{Rle} object 
+should be preferred to store the count data for lower memory footprint and better efficiency. Also to speed things up,
+one could set \Rfunarg{useMC=T} to enable parallel processing of multiple \Robject{seqnames}, 
+the number of parallel process could be set by \Rfunarg{options(mc.cores=n)}.
+
+<<buildENCODEcgr1bp, eval=FALSE>>=
+cgr<-GRanges("chr17", strand='-',
+	IRanges(seq(7560001, 7610000), width=1))
+bf<-system.file("extdata", "encodeFiles.txt", package = "biomvRCNS")
+bamfiles<-read.table(bf, header=T, stringsAsFactors=F)
+library(Rsamtools)
+which<-GRanges("chr17", IRanges(7560001, 7610000))
+param<-ScanBamParam(which=which, flag=scanBamFlag(isMinusStrand=TRUE))
+for(i in seq_len(nrow(bamfiles))){
+	cod<-coverage(BamFile(bamfiles[i,1]), param=param)[['chr17']][7560001:7610000]
+	mcols(cgr)<-DataFrame(mcols(cgr), DOC=cod)
+}
+@
 
 The pre-compiled data \Robject{encodeTP53} also includes the regional annotation of TP53 RNAs isoforms, \Robject{gmgr}, 
 which were derived from the ENCODE Gene Annotations (GENCODE), 
@@ -252,10 +271,7 @@ gmgr<-GRanges("chr17", IRanges(start=gtfsub[idx, 4], end=gtfsub[idx, 5],
 	names=gtfsub[idx, 13]), strand='-', TYPE=gtfsub[idx, 3])
 @
 
-
-
 We first load the \Robject{encodeTP53} data, poll the read counts for each cell type and add 1 to the base count to increase stability. 
-
 
 <<poolENCODEcgr, results=hide>>=
 data(encodeTP53)
@@ -265,7 +281,6 @@ mcols(cgr)<-DataFrame(
 	Gm12878=1+rowSums(as.matrix(mcols(cgr)[,1:2])), 
 	K562=1+rowSums(as.matrix(mcols(cgr)[,3:4])) )
 @
-
 
 For count data from sequencing, the \Rfunarg{emis.type} could be set to either \Robject{'pois'} or \Robject{'nbinom'}, 
 though \Robject{'pois'} is preferred for sharp boundary detection. For the sojourn settings, instead of using the uninformative flat prior, 
@@ -277,7 +292,6 @@ One can also supply a named \Rclass{list} object with initial values for paramet
 For emission, since the highly dispersed nature of count data,
 we set the prior for emission mean to be more extreme, with \Rfunarg{q.alpha=0.01}.
 
-
 <<ENCODEHsmmTxDbSojourn, results=hide>>=
 library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 txdb<-TxDb.Hsapiens.UCSC.hg19.knownGene	
@@ -285,11 +299,9 @@ rhsmm<-biomvRhsmm(x=cgr, xAnno=txdb, maxbp=1E3, soj.type='gamma',
 	emis.type='pois', prior.m='quantile', q.alpha=0.01)
 @
 
-
 As in the ENCODE guide \citep{ENCODEguide}, the study identified the p53 isoform observed in K562 cells has a longer 3'UTR than the isoform seen in the GM12878 cell line. 
 So here we plot our model estimates and consider the third state, namely 'exon', to represent detected transcripts. 
 And the HSMM model clearly picked up the extra transcripts of the K562 cell line at the 3'UTR. 
-
 
 <<showENCODEHsmm>>=
 rhsmm@res[mcols(rhsmm@res)[,'STATE']=='exon']

@@ -60,7 +60,7 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 			for(sn in unique(mcols(segp)[,'SAMPLE'])){
 				sni<-mcols(segp)[,'SAMPLE']==sn
 				spTrack<- AnnotationTrack(segp[sni],  name=paste(sn, ifelse(withstrand, '+', ''), sep=''), id=values(segp)[sni,'STATE'] ,background.title = "Gray", background.panel = "#FFFFFF", showFeatureId = showId, shape = "box")
-				feature(spTrack)<- values(segp)[sni,'STATE']
+				feature(spTrack)<- as.vector(values(segp)[sni,'STATE'])
 				trackList<-append(trackList, spTrack)
 			}
 		}
@@ -69,7 +69,7 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 			# annodat track +
 			gmp<-gmgr[seqnames(gmgr)==prange[1] & (strand(gmgr)=='+' | strand(gmgr)=='*') & start(gmgr) >= as.numeric(prange[2]) & end(gmgr) <= as.numeric(prange[3])]
 			apTrack<- AnnotationTrack(gmp, group=names(gmp), name=ifelse(length(gmp)==0, '', paste('  ', sep='')), background.title = "brown", background.panel = "#FFFEDB", showId = showId, shape = "box")
-			feature(apTrack)<- values(gmp)[,'TYPE'] ## this is a strong requirement
+			feature(apTrack)<- as.vector(values(gmp)[,'TYPE']) ## this is a strong requirement
 			trackList<-append(trackList, apTrack)
 			rm(gmp)
 		}				
@@ -84,7 +84,7 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 			# annodat track -
 			gmm<-gmgr[seqnames(gmgr)==prange[1] & (strand(gmgr)=='-' | strand(gmgr)=='*') & start(gmgr) >= as.numeric(prange[2]) & end(gmgr) <= as.numeric(prange[3])]
 			amTrack <- AnnotationTrack(gmm, group=names(gmm), name=ifelse(length(gmm)==0, '', paste('  ', sep='')), background.title = "brown", background.panel = "#FFFEDB", showId = showId, shape = "box")
-			feature(amTrack)<- values(gmm)[,'TYPE']
+			feature(amTrack)<- as.vector(values(gmm)[,'TYPE'])
 			trackList<-append(trackList, amTrack)
 			rm(gmm)
 		}
@@ -95,7 +95,7 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 			for(sn in unique(mcols(segm)[,'SAMPLE'])){
 				sni<-mcols(segm)[,'SAMPLE']==sn
 				smTrack<- AnnotationTrack(segm[sni],  name=paste(sn, ifelse(withstrand, '-', ''), sep=''), id=values(segm)[sni,'STATE'] ,background.title = "Gray", background.panel = "#FFFFFF", showFeatureId = showId, shape = "box")
-				feature(smTrack)<- values(segm)[sni,'STATE']
+				feature(smTrack)<- as.vector(values(segm)[sni,'STATE'])
 				trackList<-append(trackList, smTrack)
 			}
 		}

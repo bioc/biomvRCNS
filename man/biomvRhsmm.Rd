@@ -7,7 +7,7 @@
 	The batch function of building Hidden Semi Markov Model (HSMM) to estimate the most likely state sequences for multiple input data series.
 }
 \usage{
-biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', com.emis=TRUE, xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, useMC=TRUE, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', prior.m='cluster', trim=0, na.rm=TRUE)
+biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start', emis.type='norm', com.emis=FALSE, xAnno=NULL, soj.type='gamma', q.alpha=0.05, r.var=0.75, useMC=TRUE, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, grp=NULL, cluster.m=NULL, avg.m='median', prior.m='cluster', trim=0, na.rm=TRUE)
 }
 
 \arguments{
