@@ -1,3 +1,16 @@
+CHANGES IN VERSION 1.1.8
+-------------------------
+
+NEW FEATURES
+
+    o add error catching in biomvRhsmm
+    o updates in package vignette
+    
+BUG FIXES
+
+    o fine tuning of memory usage for large count data structure
+    o minor bug fixes
+
 CHANGES IN VERSION 1.1.7
 -------------------------
 
@@ -5,12 +18,7 @@ NEW FEATURES
 
     o add support of Rle like sparse data in mcols of large count data structure.
     o add mclapply for parallel processing of different seqnames in biomvRhsmm
-    o add error catching in biomvRhsmm
-    
-BUG FIXES
 
-    o fine tuning of memory usage for large count data structure
-    o minor bug fixes
 
 CHANGES IN VERSION 1.1.6
 -------------------------
