@@ -111,7 +111,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 			# init if J and maxk are ok
 			if (!is.null(maxk) && is.numeric(maxk) && (length(maxk) == 1) && (maxk > 1) &&  (maxk < nr)) {
 				message('maxbp and xPos are not present or not valid, using maxk for the sojourn distribution.')
-				soj<-list(d = unifMJ(maxk, J), type = soj.type, J=J, maxk=maxk)
+				soj<-list(type = soj.type, J=J, maxk=maxk)
 			} else {
 				stop(sprintf("'maxk' must be a single integer between 2 and the number of rows of 'x': %d.", nr))
 			}
@@ -121,7 +121,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 		} else if (!is.null(maxk) && is.numeric(maxk) && (length(maxk) == 1) && (maxk > 1) &&  (maxk < nr)) {
 			#has pos, but no good maxbp
 				warning('Has positions but no maxbp, using maxk for the sojourn distribution !!!')
-				soj<-list(d = unifMJ(maxk, J), type = soj.type, J=J, maxk=maxk)
+				soj<-list(type = soj.type, J=J, maxk=maxk)
 		} else {
 			stop(sprintf("Both maxk and maxbp are not available!"))
 		}
@@ -131,7 +131,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	}
 	# so far, soj is a list object, depending on which case
 	# case1, soj param J, maxbp from xAnno
-	# case2, no pos, has input maxk and J and d, ready for initSojDd
+	# case2, no pos, has input maxk and J and d, ready for initSojDd # may reinitialize maxk later
 	# case3, has input xPos and maxbp
 
 	# check mv vs iterative
@@ -187,18 +187,19 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	# we have more than one seq to batch
 	mcres<-mylapply(seq_along(seqs), function(s) {
 		r<-which(as.character(seqnames(xRange)) == seqs[s])
-		runout<-list()
-		
+			
 		if(length(r)<2){
+			warning('Region too short for seq ', s, ' skipped!')
 			if(iterative){
-				runout<- lapply(seq_len(nc), function(c) list(list(NA)))
+				runout<- sapply(seq_len(nc), function(c) list(NA))
 			} else {
-				runout<- lapply(unique(grp), function(g) list(list(NA)))
+				runout<- sapply(unique(grp), function(g) list(NA))
 			}
 		} else {
+			runout<-list()
 			# prep soj for the c loop, since there are multiple seq, which also means there must be xpos and maxbp
 			message(sprintf("Preparing sojourn prior for seq  '%s' ...", seqs[s]))				
-			if(is.null(soj$d)){
+			if(is.null(soj$maxk)){
 				# either has soj parameter, or has pos and maxbp for unif
 				ssoj<-append(soj, initDposV(xPos[r], maxbp))
 				if(is.null(ssoj$fttypes)){
@@ -206,8 +207,9 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 					ssoj<-append(ssoj, list(d=unifMJ(ssoj$maxk*length(r), J)))
 				}
 			} else {
-				# maxk and unif d, no maxbp or xAnno
-				ssoj<-soj
+				# maxk and unif d, no maxbp or xAnno, using the min of input maxk and length of the seq
+				ssoj<-append(soj, list(d=unifMJ(min(soj$maxk,length(r)), J)))
+				ssoj$maxk<-min(soj$maxk,length(r))
 			}	
 			ssoj <- initSojDd(ssoj)
 	
@@ -232,7 +234,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 						}
 						if(length(grep('error', class(grunout), ignore.case=T))!=0){
 							warning('Model failed for seq ', s, ' and column ', c, '.\n', grunout)
-							runout<-append(runout, list(list(NA)))
+							runout<-append(runout, list(NA))
 						} else {
 							runout<-append(runout, list(grunout)	)
 						}	
@@ -251,7 +253,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 					grunout<-tryCatch(hsmmRun(x[r,gi], xid[gi], xRange[r], ssoj, semis, cMethod, maxit, maxgap, tol, avg.m=avg.m, trim=trim, na.rm=na.rm)	, error=function(e){ return(e) })
 					if(length(grep('error', class(grunout), ignore.case=T))!=0){
 						warning('Model failed for seq ', s, ' and group ', g, '.\n', grunout)
-						runout<-append(runout, list(list(NA)))				
+						runout<-append(runout, list(NA))
 					} else {
 						runout<-append(runout, list(grunout))
 					}
