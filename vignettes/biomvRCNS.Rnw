@@ -29,7 +29,7 @@
 
 \title{\Rpackage{biomvRCNS}: Copy Number study and Segmentation for multivariate biological data.}
 \author{Yang Du\footnote{email:  duyang@fbn-dummerstorf.de}}
-\date{\today}
+\date{February 3, 2014}
 \maketitle
 
 \begin{abstract}
@@ -81,7 +81,7 @@ with data matrix stored in the meta columns. To get started, we first build a \R
 <<coriellGR>>=
 data('coriell', package='biomvRCNS')
 head(coriell, n=3)
-xgr<-GRanges(seqnames=paste('chr', coriell[,2], sep=''), 
+xgr<-GRanges(seqnames=coriell[,2], 
 	IRanges(start=coriell[,3], width=1, names=coriell[,1]))
 values(xgr)<-DataFrame(coriell[,4:5], row.names=NULL)
 xgr<-sort(xgr)
@@ -111,30 +111,34 @@ Additionally there is a built-in automatic grouping method, given a valid cluste
 By default, all data columns are assumed to be from the same group.
 
 <<coriellHsmm, results=hide>>=
-rhsmm<-biomvRhsmm(x=xgr, maxbp=4E4, J=3, soj.type='gamma', 
-	com.emis=F, emis.type='norm', prior.m='quantile', grp=c(1,2))
+rhsmm<-biomvRhsmm(x=xgr, maxbp=1E5, J=3, soj.type='gamma', 
+	com.emis=T, emis.type='norm', prior.m='quantile', grp=c(1,2))
 @ 
 <<coriellHsmmres>>=
 show(rhsmm)
 @ 
 
 
-In the above run, we limit the model complexity by setting the \Rfunarg{maxbp} to $4E4$, 
+In the above run, we limit the model complexity by setting the \Rfunarg{maxbp} to $1E5$, 
 which will restrict the maximum sojourn time to \Rfunarg{maxbp}. \Rfunarg{J} is the number of states in the HSMM model, 
 this argument can be given explicitly or estimated from prior information provided in \Rfunarg{xAnno}. 
 Argument \Rfunarg{soj.type} defines the type of sojourn distribution; with Gamma distributed sojourn, 
 the neighbouring position will tend to have the same state, and transit to other states if far apart. 
 In this way the sojourn distribution fully incorporate the positional information into the probabilistic framework.
+
 Argument \Rfunarg{emis.type} controls the distribution of emission probability, 
 in this case the log2 ratio of aCGH data is considered to follow Normal distribution. 
-The emission density could be estimated using all data or only data on the repective region or chromosome 
-(identified by unique \Rfunction{seqnames}), controlling via \Rfunarg{com.emis}. 
+The emission density could be estimated using all data or only data on the respective region or chromosome 
+(identified by unique \Rfunction{seqnames}), controlling via \Rfunarg{com.emis}.  In this case, the ratios cross chromosomes are directly comparable, thus \Rfunarg{com.emis} was set to true.
 The prior of the emission parameters could be controlled by supplying \Rfunarg{q.alpha} and \Rfunarg{r.var} with \Rfunarg{prior.m='quantile'}, 
 or automatically determined through a clustering process with \Rfunarg{prior.m='cluster'}.
-The function will then call C codes and estimate the most likely state sequence, with either \Rfunarg{cMethod='F-B'} or \Rfunarg{cMethod='Viterbi'}. 
+
+The function will then call C codes and estimate the most likely state sequence, with either \Rfunarg{cMethod='F-B'} or \Rfunarg{cMethod='Viterbi'}.
 The \Rfunarg{F-B} method (default) uses a forward-backward algorithm described in \citet{Guedon2003}, 
 which gives a smooth state sequence, whereas the Viterbi algorithm with \Rfunarg{cMethod='Viterbi'} 
 will use the state profile estimated by the forward-backward algorithm and rebuild the most likely state sequence.
+The parameter \Rfunarg{maxit} controls the maximum iteration of the EM algorithm. When assessing aCGH data, the quantile method should be able to give a good estimation of the emission desity priors, one can also adjust \Rfunarg{q.alpha} and \Rfunarg{r.var} for better control over the mean-variance relationships in extreme states. SInce we are not training a prediction model, but trying to derive the most likely state sequence, one iteration of the EM procedure is sufficient.
+
 The function returns an object of class \Rclass{biomvRCNS}, in which the \Robject{res} slot 
 is a \Rclass{GRanges} object containing the summary of each estimated segments. There are three meta columns: 
 column \Robject{SAMPLE} gives the column name of which sample this segment belongs to; 
@@ -144,16 +148,16 @@ and $3$ for region of duplication, whereas state $2$ could be considered copy ne
 column \Robject{AVG}, gives the segment average value, which could take the form of (trimmed) mean or median controlled by \Rfunarg{avg.m}. 
 The original input is also kept and returned in slot \Robject{x} with the estimated most likely state assignment and associated probability.
 
-
 A \Rfunction{plot} method has been implemented for \Rclass{biomvRCNS} object using package \Rpackage{Gviz}, 
 by default the \Rfunction{plot} method tries to output graphics to multiple EPS/PDF files for each chromosome region and sample. 
-Here we set \Rfunarg{tofile=FALSE} to output graphics to the current device, and only show resulting graphics for chromosome 1 from sample Coriell.13330.
+Multiple samples could also be overlaid on the same image, by passing \Rfunarg{sampleInOne=TRUE} in the \Rfunction{plot} method.
+Here we set \Rfunarg{tofile=FALSE} to output graphics to the current device, and only show resulting graphics for chromosome 11 from sample Coriell.05296.
 
 
 \begin{center}
 <<coriellHsmmplot, fig=TRUE, echo=TRUE>>=
-obj<-biomvRGviz(exprgr=xgr[seqnames(xgr)=='chr1', 'Coriell.13330'], 
-	seggr=rhsmm@res[mcols(rhsmm@res)[,'SAMPLE']=='Coriell.13330'], tofile=FALSE)
+obj<-biomvRGviz(exprgr=xgr[seqnames(xgr)=='11', 'Coriell.05296'], 
+	seggr=rhsmm@res[mcols(rhsmm@res)[,'SAMPLE']=='Coriell.05296'], tofile=FALSE)
 @ 
 \end{center}
 
@@ -261,14 +265,13 @@ for(i in seq_len(nrow(bamfiles))){
 The pre-compiled data \Robject{encodeTP53} also includes the regional annotation of TP53 RNAs isoforms, \Robject{gmgr}, 
 which were derived from the ENCODE Gene Annotations (GENCODE), 
 \url{http://hgdownload.cse.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeGencodeV4/wgEncodeGencodeManualV4.gtf.gz)}
-, and subset to only isoforms of TP53 gene. The annotation object \Robject{gmgr} could be rebuilt with the following lines using the included file under \Robject{extdata}.
+, and subset to only isoforms of TP53 gene and neighboring genes in the region. The annotation object \Robject{gmgr} could be rebuilt with the following lines using the included file under \Robject{extdata}. The additional file 'gmodTP53.gff' can also be directly imported as \Rclass{GRanges} using \Rpackage{rtracklayer}.
 
 <<buildENCODEgmgr, eval=FALSE>>=
-af<-system.file("extdata", "gmodTP53.csv", package = "biomvRCNS")
+af<-system.file("extdata", "gmodTP53.gff", package = "biomvRCNS")
 gtfsub<-read.table(af, fill=T, stringsAsFactors=F)
-idx<-gtfsub[,3]=='CDS' | gtfsub[,3]=='UTR'
-gmgr<-GRanges("chr17", IRanges(start=gtfsub[idx, 4], end=gtfsub[idx, 5], 
-	names=gtfsub[idx, 13]), strand='-', TYPE=gtfsub[idx, 3])
+gmgr<-GRanges("chr17", IRanges(start=as.integer(gtfsub[idx, 4]), end=as.integer(gtfsub[idx, 5]), 
+	names=gtfsub[idx, 13]), strand=gtfsub[idx, 7], TYPE=gtfsub[idx, 3])
 @
 
 We first load the \Robject{encodeTP53} data, poll the read counts for each cell type and add 1 to the base count to increase stability. 

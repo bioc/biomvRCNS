@@ -228,9 +228,9 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 							}
 						}
 						if(spRle){
-							grunout<-tryCatch(hsmmRun(x[,ci][[1]][r], xid[ci], xRange[r], ssoj, semis, cMethod, maxit, maxgap,  tol, avg.m=avg.m, trim=trim, na.rm=na.rm), error=function(e){ return(e) })
+							grunout<-tryCatch(hsmmRun(x[,ci][[1]][r], xid[ci], xRange[r], ssoj, semis, cMethod, maxit, maxgap,  tol, avg.m=avg.m, trim=trim, na.rm=na.rm, com.emis=com.emis), error=function(e){ return(e) })
 						} else {
-							grunout<-tryCatch(hsmmRun(x[r,ci], xid[ci], xRange[r], ssoj, semis, cMethod, maxit, maxgap,  tol, avg.m=avg.m, trim=trim, na.rm=na.rm), error=function(e){ return(e) }) 	
+							grunout<-tryCatch(hsmmRun(x[r,ci], xid[ci], xRange[r], ssoj, semis, cMethod, maxit, maxgap,  tol, avg.m=avg.m, trim=trim, na.rm=na.rm, com.emis=com.emis), error=function(e){ return(e) }) 	
 						}
 						if(length(grep('error', class(grunout), ignore.case=T))!=0){
 							warning('Model failed for seq ', s, ' and column ', c, '.\n', grunout)
@@ -250,7 +250,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 							semis<-estEmis(x[r,gi], J=J, prior.m=prior.m, emis.type=emis.type, q.alpha=q.alpha, r.var=r.var)
 						}
 					}
-					grunout<-tryCatch(hsmmRun(x[r,gi], xid[gi], xRange[r], ssoj, semis, cMethod, maxit, maxgap, tol, avg.m=avg.m, trim=trim, na.rm=na.rm)	, error=function(e){ return(e) })
+					grunout<-tryCatch(hsmmRun(x[r,gi], xid[gi], xRange[r], ssoj, semis, cMethod, maxit, maxgap, tol, avg.m=avg.m, trim=trim, na.rm=na.rm, com.emis=com.emis)	, error=function(e){ return(e) })
 					if(length(grep('error', class(grunout), ignore.case=T))!=0){
 						warning('Model failed for seq ', s, ' and group ', g, '.\n', grunout)
 						runout<-append(runout, list(NA))
@@ -320,7 +320,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 
 
 
-hsmmRun<-function(x, xid='sampleid', xRange, soj, emis, cMethod='F-B', maxit=1, maxgap=Inf, tol= 1e-6, avg.m='median', trim=0, na.rm=TRUE){
+hsmmRun<-function(x, xid='sampleid', xRange, soj, emis, cMethod='F-B', maxit=1, maxgap=Inf, tol= 1e-6, avg.m='median', trim=0, na.rm=TRUE, com.emis=FALSE){
 	# now x should be a matrix, when emis.type=mvt or mvnorm, ncol>1
 	if(is.null(dim(x))) x<-matrix(as.vector(x))
 	colnames(x)<-xid
@@ -359,7 +359,9 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis, cMethod='F-B', maxit=1, 
 		  stop("Sojourn distribution does not work well, NaN in B$L ")
 		}
 		#update emission according to the new estimated distribution parameters using B$L
-		emis<-initEmis(emis=emis, x=x, B=B)
+		if(!com.emis){
+				emis<-initEmis(emis=emis, x=x, B=B)
+		}
 		# update sojourn dD, using B$eta
 		soj<-initSojDd(soj=soj, B=B)
 		
@@ -369,6 +371,9 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis, cMethod='F-B', maxit=1, 
 			break()	
 		}
 	}	 # end for maxit
+	
+	BL<-matrix(B$L,ncol=J)
+	BL<-t(apply(BL, 1, function(x) abs(x)/sum(abs(x))))
 	
 	# switch cMethod
 	if (cMethod=='Viterbi'){
@@ -388,17 +393,17 @@ hsmmRun<-function(x, xid='sampleid', xRange, soj, emis, cMethod='F-B', maxit=1, 
 		V  = .C("logviterbi", a=as.double(logtrans), pi=as.double(loginit), b=as.double(logb), d=as.double(logd), D=as.double(logD),
           maxk=as.integer(maxk), DL=as.integer(nrow(soj$d)), T=as.integer(nr), J=as.integer(J), 
           alpha = double(nr*J), shat=integer(nr), si=double(nr*J), opt=integer(nr*J), ops=integer(nr*J), PACKAGE='biomvRCNS')
-        yhat<-V$shat+1
-        yp<-Rle(V$alpha[(yhat-1)*nr+1:nr])
+        yhat<-V$shat+1      
 	} else if (cMethod=='F-B'){
 		## assign states and split if necessary.
-		yhat<-apply(matrix(B$L,ncol=J),1,which.max)
-		yp<-Rle(B$L[(yhat-1)*nr+1:nr])
+		yhat<-apply(BL, 1, which.max)
 	}
+	yp<-Rle(as.vector(BL)[(yhat-1)*nr+1:nr])
 	if(!is.null(soj$fttypes)){
 		yhat<-soj$fttypes[yhat]
 	}
 	yhat<-Rle(as.character(yhat))
+	
 	# setup this new res gr
 	Ilist<-lapply(unique(yhat), function(j) do.call(cbind, splitFarNeighbouryhat(yhat, xRange=xRange, maxgap=maxgap, state=j)))
 	names(Ilist)<-unique(yhat)

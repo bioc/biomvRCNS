@@ -7,7 +7,7 @@
  This is the working horse of the \code{biomvRhsmm}
 }
 \usage{
-hsmmRun(x, xid="sampleid", xRange, soj, emis, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, avg.m='median', trim=0, na.rm=TRUE)
+hsmmRun(x, xid="sampleid", xRange, soj, emis, cMethod='F-B', maxit=1, maxgap=Inf, tol=1e-06, avg.m='median', trim=0, na.rm=TRUE, com.emis=FALSE)
 }
 
 \arguments{
@@ -46,6 +46,9 @@ hsmmRun(x, xid="sampleid", xRange, soj, emis, cMethod='F-B', maxit=1, maxgap=Inf
 }
   \item{na.rm}{
 	\code{TRUE} if \code{NA} value should be ignored 
+}
+  \item{com.emis}{
+	whether to set a common emission prior across different seqnames. if TRUE, the emission will not be updated during individual runs.
 }
 }
 \details{
