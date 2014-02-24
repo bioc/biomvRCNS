@@ -1,3 +1,14 @@
+CHANGES IN VERSION 1.3.3
+-------------------------
+
+NEW FEATURES
+
+    o updates in package vignette
+
+BUG FIXES
+
+    o remove limitation of maximum typecode in the plot, now using rainbow()
+    
 CHANGES IN VERSION 1.3.2
 -------------------------
 

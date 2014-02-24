@@ -16,23 +16,26 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 	}
 	if(! plotstrand %in% c('+', '-', '*')) stop("Invalid plotstrand parameter specified, must be one of '+' / '-' / '*' !")
 	# handle the colour automatically according to gmgr and seggr
-	colors<-c('cyan', 'tomato', 'green','purple','gold', 'violet')
+	
 	typecode<-NULL
 	if(!is.null(gmgr)){
-		if(length(unique(values(gmgr)[,'TYPE'])) > length(colors)) stop("There are too many unique levels in values(gmgr)[,'TYPE'], please re-check!")
+		#if(length(unique(values(gmgr)[,'TYPE'])) > length(colors)) stop("There are too many unique levels in values(gmgr)[,'TYPE'], please re-check!")
 		typecode<-c(typecode,unique(values(gmgr)[,'TYPE']))
 	}
 	if(!is.null(seggr)){
-		if(length(unique(values(seggr)[,'STATE'])) > length(colors)) stop("There are too many unique levels in values(seggr)[,'STATE'], please re-check!")
+		#if(length(unique(values(seggr)[,'STATE'])) > length(colors)) stop("There are too many unique levels in values(seggr)[,'STATE'], please re-check!")
 		typecode<-unique(c(typecode, unique(values(seggr)[,'STATE'])))
 	}
 	if(!is.null(typecode)){
+		colors<-rainbow(length(typecode))
 		typecode<-typecode[order(typecode)]
 		params <- as.list(colors[seq_along(typecode)])
 		names(params)<-typecode
 	} else {
 		params<-list()
+		colors<-c('cyan', 'tomato', 'green','purple','gold', 'violet')
 	}
+	
 	
 	if(hasArg(ylab))  ylab <- list(...)$ylab else ylab<-NULL
 	if(hasArg(main))  main <- list(...)$main else main<-NULL
@@ -44,7 +47,7 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 	
 	
 	regionID<-ifelse(is.null(regionID), '', paste(regionID, '@', sep=''))
-	if(is.null(main))	main<-paste(regionID, prange[1], '.', prange[2],'-', prange[3], '@', paste(colnames(mcols(exprgr)), collapse='&'),  sep='')
+	if(is.null(main))	main<-paste(regionID, prange[1], ':', prange[2],'-', prange[3], '@', paste(colnames(mcols(exprgr)), collapse='&'),  sep='')
 	trackList<-list()
 		
 	# datatrack + 
@@ -56,10 +59,10 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 		if(!is.null(seggr)){
 			# segmentation + as a separate state annotation
 			# no id, with legend
-			segp<-seggr[seqnames(seggr)==prange[1] & (strand(seggr)=='+' | strand(seggr)=='*') & start(seggr) >= as.numeric(prange[2]) & end(seggr) <= as.numeric(prange[3])]
+			segp<-seggr[seqnames(seggr)==prange[1] & start(seggr) >= as.numeric(prange[2]) & end(seggr) <= as.numeric(prange[3])]
 			for(sn in unique(mcols(segp)[,'SAMPLE'])){
 				sni<-mcols(segp)[,'SAMPLE']==sn
-				spTrack<- AnnotationTrack(segp[sni],  name=paste(sn, ifelse(withstrand, '+', ''), sep=''), id=values(segp)[sni,'STATE'] ,background.title = "Gray", background.panel = "#FFFFFF", showFeatureId = showId, shape = "box")
+				spTrack<- AnnotationTrack(segp[sni], group=names(segp)[sni], name=paste(sn, ifelse(withstrand, '+', ''), sep=''), id=values(segp)[sni,'STATE'] ,background.title = "Gray", background.panel = "#FFFFFF", showFeatureId = showId, showId = showId)
 				feature(spTrack)<- as.vector(values(segp)[sni,'STATE'])
 				trackList<-append(trackList, spTrack)
 			}
@@ -67,8 +70,8 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 		
 		if(!is.null(gmgr)){
 			# annodat track +
-			gmp<-gmgr[seqnames(gmgr)==prange[1] & (strand(gmgr)=='+' | strand(gmgr)=='*') & start(gmgr) >= as.numeric(prange[2]) & end(gmgr) <= as.numeric(prange[3])]
-			apTrack<- AnnotationTrack(gmp, group=names(gmp), name=ifelse(length(gmp)==0, '', paste('  ', sep='')), background.title = "brown", background.panel = "#FFFEDB", showId = showId, shape = "box")
+			gmp<-gmgr[seqnames(gmgr)==prange[1]& start(gmgr) >= as.numeric(prange[2]) & end(gmgr) <= as.numeric(prange[3])]
+			apTrack<- AnnotationTrack(gmp, group=names(gmp), name=ifelse(length(gmp)==0, '', paste('  ', sep='')), background.title = "brown", background.panel = "#FFFEDB", showId = showId)
 			feature(apTrack)<- as.vector(values(gmp)[,'TYPE']) ## this is a strong requirement
 			trackList<-append(trackList, apTrack)
 			rm(gmp)
@@ -79,11 +82,11 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 	axisTrack <- GenomeAxisTrack(add53 = TRUE, add35 = TRUE, littleTicks = TRUE)
 	trackList<-append(trackList, axisTrack)
 	
-	if(plotstrand == '-' | plotstrand == '*'){			
+	if(plotstrand == '-'){			
 		if(!is.null(gmgr)){
 			# annodat track -
-			gmm<-gmgr[seqnames(gmgr)==prange[1] & (strand(gmgr)=='-' | strand(gmgr)=='*') & start(gmgr) >= as.numeric(prange[2]) & end(gmgr) <= as.numeric(prange[3])]
-			amTrack <- AnnotationTrack(gmm, group=names(gmm), name=ifelse(length(gmm)==0, '', paste('  ', sep='')), background.title = "brown", background.panel = "#FFFEDB", showId = showId, shape = "box")
+			gmm<-gmgr[seqnames(gmgr)==prange[1] & start(gmgr) >= as.numeric(prange[2]) & end(gmgr) <= as.numeric(prange[3])]
+			amTrack <- AnnotationTrack(gmm, group=names(gmm), name=ifelse(length(gmm)==0, '', paste('  ', sep='')), background.title = "brown", background.panel = "#FFFEDB", showId = showId)
 			feature(amTrack)<- as.vector(values(gmm)[,'TYPE'])
 			trackList<-append(trackList, amTrack)
 			rm(gmm)
@@ -91,10 +94,10 @@ biomvRGviz<-function(exprgr, gmgr=NULL, prange=NULL, regionID=NULL, seggr=NULL, 
 		if(!is.null(seggr)){
 			# segmentation + as a separate state annotation
 			# no id, with legend
-			segm<-seggr[seqnames(seggr)==prange[1] &  (strand(seggr)=='-' | strand(seggr)=='*')  & start(seggr) >= as.numeric(prange[2]) & end(seggr) <= as.numeric(prange[3])]
+			segm<-seggr[seqnames(seggr)==prange[1] & start(seggr) >= as.numeric(prange[2]) & end(seggr) <= as.numeric(prange[3])]
 			for(sn in unique(mcols(segm)[,'SAMPLE'])){
 				sni<-mcols(segm)[,'SAMPLE']==sn
-				smTrack<- AnnotationTrack(segm[sni],  name=paste(sn, ifelse(withstrand, '-', ''), sep=''), id=values(segm)[sni,'STATE'] ,background.title = "Gray", background.panel = "#FFFFFF", showFeatureId = showId, shape = "box")
+				smTrack<- AnnotationTrack(segm[sni], group=names(segm)[sni], name=paste(sn, ifelse(withstrand, '-', ''), sep=''), id=values(segm)[sni,'STATE'] ,background.title = "Gray", background.panel = "#FFFFFF", showFeatureId = showId, showId = showId)
 				feature(smTrack)<- as.vector(values(segm)[sni,'STATE'])
 				trackList<-append(trackList, smTrack)
 			}

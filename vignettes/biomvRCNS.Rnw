@@ -29,7 +29,7 @@
 
 \title{\Rpackage{biomvRCNS}: Copy Number study and Segmentation for multivariate biological data.}
 \author{Yang Du\footnote{email:  duyang@fbn-dummerstorf.de}}
-\date{February 3, 2014}
+\date{February 24, 2014}
 \maketitle
 
 \begin{abstract}
@@ -151,7 +151,7 @@ The original input is also kept and returned in slot \Robject{x} with the estima
 A \Rfunction{plot} method has been implemented for \Rclass{biomvRCNS} object using package \Rpackage{Gviz}, 
 by default the \Rfunction{plot} method tries to output graphics to multiple EPS/PDF files for each chromosome region and sample. 
 Multiple samples could also be overlaid on the same image, by passing \Rfunarg{sampleInOne=TRUE} in the \Rfunction{plot} method.
-Here we set \Rfunarg{tofile=FALSE} to output graphics to the current device, and only show resulting graphics for chromosome 11 from sample Coriell.05296.
+Here we set \Rfunarg{tofile=FALSEALSE} to output graphics to the current device, and only show resulting graphics for chromosome 11 from sample Coriell.05296.
 
 
 \begin{center}
@@ -314,7 +314,7 @@ rhsmm@res[mcols(rhsmm@res)[,'STATE']=='exon']
 <<plotENCODEHsmmG, fig=TRUE>>=
 g<-mcols(rhsmm@res)[,'STATE']=='exon' & mcols(rhsmm@res)[,'SAMPLE']=='Gm12878'
 obj<-biomvRGviz(exprgr=cgr[,'Gm12878'], gmgr=gmgr, 
-	seggr=rhsmm@res[g], plotstrand='-', regionID='TP53',  tofile=FALSE)
+	seggr=rhsmm@res[g], plotstrand='-', regionID='TP53', tofile=FALSE)
 @ 
 \end{center}
 
@@ -383,7 +383,7 @@ And due to the non-uniformly located CpG sites, one may split inter-spreading lo
 
 <<varioHsmmrun, results=hide>>=
 rhsmm<-biomvRhsmm(x=variosm, maxbp=100, prior.m='cluster', maxgap=100)
-@ 
+@
 
 <<finddmr>>=
 hiDiffgr<-rhsmm@res[mcols(rhsmm@res)[,'STATE']!=2 
@@ -396,25 +396,70 @@ hiDiffgr<- hiDiffgr[!dirNo]
 loPgr<-rhsmm@res[mcols(rhsmm@res)[,'STATE']==1
 	& mcols(rhsmm@res)[,'SAMPLE']=='p.val']
 	
-DMRs<-intersect(hiDiffgr, loPgr)
+DMRs<-reduce(intersect(hiDiffgr, loPgr), min.gapwidth=100)
 idx<-findOverlaps(variosm, DMRs, type='within')
-mcols(DMRs)<-DataFrame(aggregate(as.data.frame(mcols(variosm[idx@queryHits])), 
-	by=list(DMR=idx@subjectHits), FUN=median))
+mcols(DMRs)<-DataFrame(cbind(TYPE='DMR', aggregate(as.data.frame(mcols(variosm[idx@queryHits])), 
+	by=list(DMR=idx@subjectHits), FUN=median)[,-1]))
+names(DMRs)<-paste0('DMRs', seq_along(DMRs))	
 DMRs
 @
 
 After the model fitting, by intersecting regions with extreme \Robject{meth.diff} and regions with low \Robject{p.val}, 
 we can locate those detected DMRs, returned with their average \Robject{meth.diff} and \Robject{p.val}. Comparing to 
-the regions detected in the \Rpackage{BiSeq} vignette, the two sets of regions are largely similar except for one region
-(chr1:872335,872386), which in our case the \Robject{meth.diff} has not been considered high enough. 
+the regions detected in the \Rpackage{BiSeq} vignette, the two sets of regions are largely similar except for two regions:
+(chr1:872335,872386), which in our case the \Robject{meth.diff} has not been considered high enough due to the highly asymmetric distribution of ‘meth.diff’;
+ another region (chr2:46915,46937) resides in the tail of chromosome 2 with low density of methylation sites, 
+which has been sorted to the intermediate states due to the lack of support from both the emission level and the sojourn time. 
 However it is worth mentioning that due to the filtering applied in their work-flow, they built wider regions out of a smaller set of
 more significant sites; while in our case, the regions are more refined and especially we identified two hypomethylated regions.
 
 \begin{center}
 <<plotdmr, fig=TRUE>>=
-s<-seqnames(rhsmm@res) == 'chr1'
-e<-seqnames(variosm) == 'chr1'
-obj<-biomvRGviz(exprgr=variosm[e],  seggr=rhsmm@res[s], regionID='DMR', tofile=FALSE)
+plot(rhsmm, gmgr=DMRs, tofile=FALSE)
+@ 
+\end{center}
+
+Other than the iterative fitting of individual models for the two profiles, it is also possible to take advantage of the multivariate nature of the data. 
+Since in this case we are interested in locating regions show high difference in the methylation level, while also achieving high significance
+in the statistical test. To better capture the covariance structure of possible combination of the two profiles, we use the multivariate Normal for the emission and raise the number of state to a relatively 
+high number, for example 6. Also we enable the '\Rfunarg{com.emis}' mode to learn from the whole data rather than individual chromosome. After the model fitting, 
+we inspect the estimated segment profile produced by the \Rfunction{plot} method. We could see that segments labelled with state '6' could be consider as the most significant DMRs,
+which show high \Robject{meth.diff} and with very low \Robject{p.val}, while state '5' could be considered as potential candidates for DMRs with relatively lower confidence.
+After the model fitting, one can also access the fitted emission and sojourn parameters. One can see from the emission parameter and also from the figure, the state 1 could be potentially linked to hypomethylated regions,
+where the methylation difference average is under 0 yet with relatively low \Robject{p.val}.
+
+<<varioHsmmrun2, results=hide>>=
+rhsmm<-biomvRhsmm(x=variosm, J=6, maxbp=100, emis.type='mvnorm',
+ prior.m='cluster', maxgap=100, com.emis=T)
+@
+
+\begin{center}
+<<plotdmr2, fig=TRUE>>=
+plot(rhsmm, tofile=FALSE)
+@ 
+\end{center}
+
+<<finddmr2>>=
+DMRs<-reduce(rhsmm@res[mcols(rhsmm@res)[,'STATE']=='6'], min.gapwidth=100)
+idx<-findOverlaps(variosm, DMRs, type='within')
+mcols(DMRs)<-DataFrame(cbind(TYPE='DMR', aggregate(as.data.frame(mcols(variosm[idx@queryHits])), 
+	by=list(DMR=idx@subjectHits), FUN=median)[,-1], stringsAsFactors=F))
+names(DMRs)<-paste0('DMRs', seq_along(DMRs))
+DMRs
+cDMRs<-reduce(rhsmm@res[mcols(rhsmm@res)[,'STATE']=='5'], min.gapwidth=100)
+idx<-findOverlaps(variosm, cDMRs, type='within')
+mcols(cDMRs)<-DataFrame(cbind(TYPE='cDMR', aggregate(as.data.frame(mcols(variosm[idx@queryHits])), 
+	by=list(cDMRs=idx@subjectHits), FUN=median)[,-1], stringsAsFactors=F))
+names(cDMRs)<-paste0('cDMRs', seq_along(cDMRs))
+cDMRs
+rhsmm@param$emis.par['chr1',][[1]]
+rhsmm@param$soj.par['chr1',][[1]]
+@ 
+
+
+\begin{center}
+<<plotdmr3, fig=TRUE>>=
+plot(rhsmm, gmgr=c(DMRs, cDMRs), tofile=FALSE)
 @ 
 \end{center}
 
