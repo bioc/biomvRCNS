@@ -1,0 +1,14 @@
+citHeader("To cite biomvRhsmm please use the below entry; for other models in the packages please cite the vignette:")
+
+citEntry(entry="article",
+	title = "biomvRhsmm: Genomic Segmentation with Hidden Semi-Markov Model",
+	author = "Yang Du, Eduard Murani, Siriluck Ponsuksili, and Klaus Wimmers",
+	journal="BioMed Research International",
+	year = 2014,
+  volume="2014",
+	textVersion = 
+	"Yang Du, Eduard Murani, Siriluck Ponsuksili, and Klaus Wimmers, 'biomvRhsmm: Genomic Segmentation with Hidden Semi-Markov Model,' BioMed Research International, vol. 2014, Article ID 910390, 11 pages, 2014. doi:10.1155/2014/910390"
+)
+
+citFooter("Thanks very much for using biomvRCNS!,",
+          "we appreciate if you remember to cite it in your paper : ).")
