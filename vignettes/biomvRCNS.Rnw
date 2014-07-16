@@ -28,8 +28,8 @@
 
 
 \title{\Rpackage{biomvRCNS}: Copy Number study and Segmentation for multivariate biological data.}
-\author{Yang Du\footnote{email:  duyang@fbn-dummerstorf.de}}
-\date{February 24, 2014}
+\author{Yang Du\footnote{email:  yang.du@uni-rostock.de}}
+\date{July 16, 2014}
 \maketitle
 
 \begin{abstract}
@@ -59,7 +59,7 @@ options(width = 95)
 
 
 In the package, 3 main functions are provided for the batch processing of multiple chromosome regions across samples:  
-\Rfunction{biomvRhsmm},  a hidden semi Markov model (HSMM); \Rfunction{biomvRseg}, 
+\Rfunction{biomvRhsmm},  a hidden semi Markov model (HSMM) \citep{biomvrcns2013fbn}; \Rfunction{biomvRseg}, 
 a maximum likelihood based homogeneous segmentation model; and a third \Rfunction{biomvRmgmr}, 
 custom batch function using max-gap-min-run algorithm.  In the following sections we will illustrate their functionalities using example data.
 Currently the package does not deal with data correction, so input should be normalized by reference or paired sample and corrected for factor of interest before passing down.
@@ -270,8 +270,8 @@ which were derived from the ENCODE Gene Annotations (GENCODE),
 <<buildENCODEgmgr, eval=FALSE>>=
 af<-system.file("extdata", "gmodTP53.gff", package = "biomvRCNS")
 gtfsub<-read.table(af, fill=T, stringsAsFactors=F)
-gmgr<-GRanges("chr17", IRanges(start=as.integer(gtfsub[idx, 4]), end=as.integer(gtfsub[idx, 5]), 
-	names=gtfsub[idx, 13]), strand=gtfsub[idx, 7], TYPE=gtfsub[idx, 3])
+gmgr<-GRanges("chr17", IRanges(start=gtfsub[, 4], end=gtfsub[, 5], 
+	names=gtfsub[, 13]), strand=gtfsub[, 7], TYPE=gtfsub[, 3])
 @
 
 We first load the \Robject{encodeTP53} data, poll the read counts for each cell type and add 1 to the base count to increase stability. 

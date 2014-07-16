@@ -2,10 +2,10 @@ Package: biomvRCNS
 Type: Package
 Title: Copy Number study and Segmentation for multivariate biological
         data
-Version: 1.5.0
-Date: 2014-02-24
+Version: 1.5.1
+Date: 2014-07-16
 Author: Yang Du
-Maintainer: Yang Du <duyang@fbn-dummerstorf.de>
+Maintainer: Yang Du <yang.du@uni-rostock.de>
 Description: In this package, a Hidden Semi Markov Model (HSMM) and one
         homogeneous segmentation model are designed and implemented for
         segmentation genomic data, with the aim of assisting in
