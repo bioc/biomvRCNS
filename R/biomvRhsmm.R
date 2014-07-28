@@ -85,7 +85,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	grp<-preClustGrp(x, grp=grp, cluster.m=cluster.m) #?todo there could be problem if spRle and need clustering
 	
 	# initial sojourn setup unify parameter input / density input,  using extra distance, non-integer value can give a dtype value
-	if(!is.null(xAnno) && !is.null(soj.type) && soj.type %in% c('gamma', 'pois', 'nbinom') && class(xAnno) %in% c('TranscriptDb', 'GRanges', 'GRangesList', 'list')){
+	if(!is.null(xAnno) && !is.null(soj.type) && soj.type %in% c('gamma', 'pois', 'nbinom') && class(xAnno) %in% c('TxDb', 'GRanges', 'GRangesList', 'list')){
 		#	this is only used when the xAnno object contains appropriate annotation information which could be used as prior for the sojourn dist in the new HSMM model
 		# if xAnno is also present, then J will be estimated from xAnno, and pop a warning, ## this only make sense if difference exist in the distribution of sojourn of states.	
 		# a further list object allow direct custom input for initial sojourn dist parameters., e.g. list(lambda=c(10, 50, 1000))
@@ -461,7 +461,7 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 	# there is also the possibility of proposing an empirical number for the states.
 	# must ensure there are at least 2 for each state ? todo
 		
-	if(class(xAnno) == 'TranscriptDb') {   
+	if(class(xAnno) == 'TxDb') {   
 	   if(length(find.package('GenomicFeatures', quiet=T))==0) {
 			stop("'GenomicFeatures' is not found !!!")
 		} else {

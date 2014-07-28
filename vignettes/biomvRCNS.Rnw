@@ -288,8 +288,8 @@ mcols(cgr)<-DataFrame(
 For count data from sequencing, the \Rfunarg{emis.type} could be set to either \Robject{'pois'} or \Robject{'nbinom'}, 
 though \Robject{'pois'} is preferred for sharp boundary detection. For the sojourn settings, instead of using the uninformative flat prior, 
 we here use estimates from other data source as a prior. We load the \Rpackage{TxDb.Hsapiens.UCSC.hg19.knownGene} known gene database, 
-and pass the \Rclass{TranscriptDb} object to \Rfunarg{xAnno}.  Then internally sojourn parameters and state number \Rfunarg{J} 
-will be estimated from \Rfunarg{xAnno} by calling function \Rfunction{sojournAnno}. When given a  \Rclass{TranscriptDb} object to \Rfunarg{xAnno}, 
+and pass the \Rclass{TxDb} object to \Rfunarg{xAnno}.  Then internally sojourn parameters and state number \Rfunarg{J} 
+will be estimated from \Rfunarg{xAnno} by calling function \Rfunction{sojournAnno}. When given a  \Rclass{TxDb} object to \Rfunarg{xAnno}, 
 state number would be set to 3 and each represents 'intergenic', 'intron' and 'exon'. 
 One can also supply a named \Rclass{list} object with initial values for parameters of distribution specified by \Rfunarg{soj.type}.
 For emission, since the highly dispersed nature of count data,

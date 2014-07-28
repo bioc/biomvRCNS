@@ -39,7 +39,7 @@ biomvRhsmm(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, usePos='start'
 	whether to set a common emission prior across different seqnames.  if TRUE, the emission will not be updated during individual runs.
 }
   \item{xAnno}{
-	a optional \code{TranscriptDb} / \code{GRanges} / \code{GRangesList} / \code{list} object used in \code{\link{sojournAnno}} to infer parameters for the sojourn distribution 
+	a optional \code{TxDb} / \code{GRanges} / \code{GRangesList} / \code{list} object used in \code{\link{sojournAnno}} to infer parameters for the sojourn distribution 
 }
   \item{soj.type}{
 	type of the sojourn distribution, only the following types are supported: 'nonpara', 'gamma', 'pois', 'nbinom'
