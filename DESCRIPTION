@@ -5,7 +5,7 @@ Title: Copy Number study and Segmentation for multivariate biological
 Version: 1.9.0
 Date: 2014-07-16
 Author: Yang Du
-Maintainer: Yang Du <yang.du@uni-rostock.de>
+Maintainer: Yang Du <tooyoung@gmail.com>
 Description: In this package, a Hidden Semi Markov Model (HSMM) and one
         homogeneous segmentation model are designed and implemented for
         segmentation genomic data, with the aim of assisting in
