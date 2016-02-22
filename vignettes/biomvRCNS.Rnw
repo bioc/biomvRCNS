@@ -331,8 +331,8 @@ Now we can locate those novel detected fragments in K562 cell line comparing to 
 One can then follow up those findings either by gene structure prediction using local nucleotides composition or by experimental validation.
 
 <<findnew>>=
-nK2gm<-findOverlaps(rhsmm@res[k], gmgr)@queryHits
-nK2G<-findOverlaps(rhsmm@res[k], rhsmm@res[g])@queryHits
+nK2gm<-queryHits(findOverlaps(rhsmm@res[k], gmgr))
+nK2G<-queryHits(findOverlaps(rhsmm@res[k], rhsmm@res[g]))
 rhsmm@res[k][setdiff(seq_len(sum(k)), unique(c(nK2G, nK2gm)))]
 @
 
@@ -398,8 +398,8 @@ loPgr<-rhsmm@res[mcols(rhsmm@res)[,'STATE']==1
 	
 DMRs<-reduce(intersect(hiDiffgr, loPgr), min.gapwidth=100)
 idx<-findOverlaps(variosm, DMRs, type='within')
-mcols(DMRs)<-DataFrame(cbind(TYPE='DMR', aggregate(as.data.frame(mcols(variosm[idx@queryHits])), 
-	by=list(DMR=idx@subjectHits), FUN=median)[,-1]))
+mcols(DMRs)<-DataFrame(cbind(TYPE='DMR', aggregate(as.data.frame(mcols(variosm[queryHits(idx)])), 
+	by=list(DMR=subjectHits(idx)), FUN=median)[,-1]))
 names(DMRs)<-paste0('DMRs', seq_along(DMRs))	
 DMRs
 @
@@ -442,14 +442,14 @@ plot(rhsmm, tofile=FALSE)
 <<finddmr2>>=
 DMRs<-reduce(rhsmm@res[mcols(rhsmm@res)[,'STATE']=='6'], min.gapwidth=100)
 idx<-findOverlaps(variosm, DMRs, type='within')
-mcols(DMRs)<-DataFrame(cbind(TYPE='DMR', aggregate(as.data.frame(mcols(variosm[idx@queryHits])), 
-	by=list(DMR=idx@subjectHits), FUN=median)[,-1], stringsAsFactors=F))
+mcols(DMRs)<-DataFrame(cbind(TYPE='DMR', aggregate(as.data.frame(mcols(variosm[queryHits(idx)])), 
+	by=list(DMR=subjectHits(idx)), FUN=median)[,-1], stringsAsFactors=F))
 names(DMRs)<-paste0('DMRs', seq_along(DMRs))
 DMRs
 cDMRs<-reduce(rhsmm@res[mcols(rhsmm@res)[,'STATE']=='5'], min.gapwidth=100)
 idx<-findOverlaps(variosm, cDMRs, type='within')
-mcols(cDMRs)<-DataFrame(cbind(TYPE='cDMR', aggregate(as.data.frame(mcols(variosm[idx@queryHits])), 
-	by=list(cDMRs=idx@subjectHits), FUN=median)[,-1], stringsAsFactors=F))
+mcols(cDMRs)<-DataFrame(cbind(TYPE='cDMR', aggregate(as.data.frame(mcols(variosm[queryHits(idx)])), 
+	by=list(cDMRs=subjectHits(idx)), FUN=median)[,-1], stringsAsFactors=F))
 names(cDMRs)<-paste0('cDMRs', seq_along(cDMRs))
 cDMRs
 rhsmm@param$emis.par['chr1',][[1]]
