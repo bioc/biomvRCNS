@@ -7,9 +7,9 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	# est.method=c('viterbi', 'smooth')
 	
 	message('Checking input ...')
-	if (!is.numeric(x) &&  !is.matrix(x) && class(x)!='GRanges') 
+	if (!is.numeric(x) &&  !is.matrix(x) && !is(x, "GRanges"))
         stop("'x' must be a numeric vector or matrix or a GRanges object.")
-    if(class(x)=='GRanges') {
+    if(is(x, "GRanges")) {
     	xid<-names(values(x))
     	xRange<-x
     	mcols(xRange)<-NULL
@@ -60,7 +60,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	}
 
 	## some checking on xPos and xRange, xRange exist then xPos derived from xRange,
-	if(!is.null(xRange) && (class(xRange)=='GRanges' || class(xRange)=='IRanges') && !is.null(usePos) && length(xRange)==nr && usePos %in% c('start', 'end', 'mid')){
+	if(!is.null(xRange) && (is(xRange, "GRanges") || is(xRange, "IRanges")) && !is.null(usePos) && length(xRange)==nr && usePos %in% c('start', 'end', 'mid')){
 		if(usePos=='start'){
 			xPos<-start(xRange)
 		} else if(usePos=='end'){
@@ -85,7 +85,7 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	grp<-preClustGrp(x, grp=grp, cluster.m=cluster.m) #?todo there could be problem if spRle and need clustering
 	
 	# initial sojourn setup unify parameter input / density input,  using extra distance, non-integer value can give a dtype value
-	if(!is.null(xAnno) && !is.null(soj.type) && soj.type %in% c('gamma', 'pois', 'nbinom') && class(xAnno) %in% c('TxDb', 'GRanges', 'GRangesList', 'list')){
+	if(!is.null(xAnno) && !is.null(soj.type) && soj.type %in% c('gamma', 'pois', 'nbinom') && (is(xAnno, "TxDb") || is(xAnno, "GRanges") || is(xAnno, "GRangesList") || is.list(xAnno))){
 		#	this is only used when the xAnno object contains appropriate annotation information which could be used as prior for the sojourn dist in the new HSMM model
 		# if xAnno is also present, then J will be estimated from xAnno, and pop a warning, ## this only make sense if difference exist in the distribution of sojourn of states.	
 		# a further list object allow direct custom input for initial sojourn dist parameters., e.g. list(lambda=c(10, 50, 1000))
@@ -142,8 +142,8 @@ biomvRhsmm<-function(x, maxk=NULL, maxbp=NULL, J=3, xPos=NULL, xRange=NULL, useP
 	}
 	
 	## build xRange if not a GRanges for the returning object
-	if(is.null(xRange) || class(xRange) != 'GRanges'){
-		if(!is.null(xRange) && class(xRange) == 'IRanges'){
+	if(is.null(xRange) || !is(xRange, "GRanges")){
+		if(!is.null(xRange) && is(xRange, "IRanges")){
 			xRange<-GRanges(seqnames='sampleseq', xRange)	
 		} else 	if(!is.null(xPos)){
 			xRange<-GRanges(seqnames='sampleseq', IRanges(start=xPos, width=1))	
@@ -461,7 +461,7 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 	# there is also the possibility of proposing an empirical number for the states.
 	# must ensure there are at least 2 for each state ? todo
 		
-	if(class(xAnno) == 'TxDb') {   
+	if(is(xAnno, "TxDb")) {   
 	   if(length(find.package('GenomicFeatures', quiet=T))==0) {
 			stop("'GenomicFeatures' is not found !!!")
 		} else {
@@ -481,14 +481,14 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 		exon <- exons(xAnno) # this give you all exon ranges ungroupped
 		intron<- unlist(intronsByTranscript(xAnno))
 		ftdist<-list(intergenic=width(intergenic), intron=width(intron), exon=width(exon))
-	} else if(class(xAnno)=='GRanges'){
+	} else if(is(xAnno, "GRanges")){
 		# then the first column of the elementMetadata must be a character vector marking the type of features.
 		# need a way to sort 
 		fts<-values(xAnno)[,1]
 		fttypes<- unique(fts)
 		J<-length(fttypes)
 		ftdist<-lapply(1:J, function(j) width(xAnno[fts==fttypes[j]]))
-	} else if (class(xAnno)=='GRangesList'){
+	} else if (is(xAnno, "GRangesList")){
 		ng<-length(xAnno)
 		## the assumptions are number of ft types could be different from different list entry, group wise analysis, which of coz could be wrapped using foreach(ng) single group approach
 		fts<-lapply(1:ng, function(g) values(xAnno[[g]])[,1])
@@ -498,7 +498,7 @@ sojournAnno<-function(xAnno, soj.type= 'gamma', pbdist=NULL){
 		fttypes<-unique(unlist(fttypesL))
 		fttypes<-fttypes[order(fttypes)]
 		ftdist<-lapply(fttypes, function(t) unlist(lapply(1:ng, function(g) ftdist[[g]][[match(t, fttypesL[[g]])]])))
-	} else if (class(xAnno)=='list'){
+	} else if (is.list(xAnno)){
 		# checking if input list has valid specs.
 		paramID<- names(xAnno) 
 		#check name fall into the right pool
