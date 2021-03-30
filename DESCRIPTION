@@ -19,4 +19,4 @@ Depends: IRanges, GenomicRanges, Gviz
 Suggests: cluster, parallel, GenomicFeatures, dynamicTreeCut,
         Rsamtools, TxDb.Hsapiens.UCSC.hg19.knownGene
 biocViews: aCGH, CopyNumberVariation, Microarray, Sequencing,
-        Sequencing, Visualization, Genetics
+        Visualization, Genetics
