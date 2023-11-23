@@ -150,7 +150,8 @@ void forward(double *a, double *pi, double *b, double *d, double *D, int T, int 
 
 		for(j=0;j<J;j++){
 			m_e(F, t, j, T) /= N[t];
-			m_e(F, t, j, T)+= DOUBLE_XMIN;
+			//m_e(F, t, j, T)+= DOUBLE_XMIN;
+			m_e(F, t, j, T)+= DBL_MIN;
 /*			Rprintf("j= %d,	t= %d, u= %d, m_e(F, t, j, T)= %.3g,\n",j, t, u, m_e(F, t, j, T));*/
 		}
 		
@@ -291,7 +292,8 @@ void viterbi(double *a, double *pi, double *b, double *d, double *D, int *maxk_r
 	int DL = DL_r[0];
 	
 /*setup local variables */	     
-	double obs, prod, maxprod=-DOUBLE_XMAX;
+	//double obs, prod, maxprod=-DOUBLE_XMAX;
+	double obs, prod, maxprod=-DBL_MAX;
 	int i, j, t, u;//, *ops, *opt;
 	
 	for(t=0;t<T;t++) {
@@ -398,7 +400,8 @@ void logviterbi(double *a, double *pi, double *b, double *d, double *D, int *max
 	int DL = DL_r[0];
 	
 /*setup local variables */	     
-	double obs, prod, maxprod=-DOUBLE_XMAX;
+	//double obs, prod, maxprod=-DOUBLE_XMAX;
+	double obs, prod, maxprod=-DBL_MAX;
 	int i, j, t, u;//, *ops, *opt;
 
 	for(t=0;t<T;t++) {
