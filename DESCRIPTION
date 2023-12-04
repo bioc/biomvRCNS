@@ -2,7 +2,7 @@ Package: biomvRCNS
 Type: Package
 Title: Copy Number study and Segmentation for multivariate biological
         data
-Version: 1.42.1
+Version: 1.42.2
 Date: 2023-12-01
 Author: Yang Du
 Maintainer: Yang Du <tooyoung@gmail.com>
@@ -20,4 +20,3 @@ Suggests: cluster, parallel, GenomicFeatures, dynamicTreeCut,
         Rsamtools, TxDb.Hsapiens.UCSC.hg19.knownGene
 biocViews: aCGH, CopyNumberVariation, Microarray, Sequencing,
         Visualization, Genetics
-PackageStatus: Deprecated
